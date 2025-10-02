@@ -8,7 +8,6 @@
 using namespace scbe;
 
 bool case7(Target::TargetSpecification& spec, int debug) {
-    // logical and/or: ( (5 & 3) | 8 ) => (1 | 8) => 9
     Unit unit = createUnit("case7");
     auto ctx = unit.getContext();
     auto fnTy = ctx->makeFunctionType({}, ctx->getI32Type());

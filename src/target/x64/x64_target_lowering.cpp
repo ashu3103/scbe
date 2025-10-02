@@ -265,8 +265,6 @@ void x64TargetLowering::lowerSwitch(MIR::Block* block, MIR::SwitchLowering* lowe
         block->addInstructionAt(instr((uint32_t)Opcode::Sub64r32i, index, unit->getContext()->getImmediateInt(min, MIR::ImmediateInt::imm32)), inIdx++);
     }
 
-    index = m_registerInfo->getRegister(m_registerInfo->getRegisterWithSize(cast<MIR::Register>(index)->getId(), 8).value());
-    
     block->addInstructionAt(
         xInstrInfo->memoryToOperand((uint32_t)Opcode::Mov64rm, rr, rr, 0, cast<MIR::Register>(index), 8, nullptr)
     , inIdx++);

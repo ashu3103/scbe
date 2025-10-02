@@ -8,13 +8,11 @@
 using namespace scbe;
 
 bool case9(Target::TargetSpecification& spec, int debug) {
-    // call: create a callee function that returns 7, main calls it and returns callee()+1 -> 8
     Unit unit = createUnit("case9");
     auto ctx = unit.getContext();
     auto fnTyCallee = ctx->makeFunctionType({}, ctx->getI32Type());
     auto callee = unit.addFunction(std::move(std::make_unique<IR::Function>("callee", fnTyCallee, IR::Linkage::External)));
 
-    // define callee body
     {
         IR::Builder b(ctx);
         auto entry = callee->insertBlock("entry");
@@ -22,7 +20,6 @@ bool case9(Target::TargetSpecification& spec, int debug) {
         b.createRet(IR::ConstantInt::get(32, 7, ctx));
     }
 
-    // main
     auto fnTyMain = ctx->makeFunctionType({}, ctx->getI32Type());
     auto main = unit.addFunction(std::move(std::make_unique<IR::Function>("main", fnTyMain, IR::Linkage::External)));
 

@@ -102,7 +102,6 @@ x64RegisterInfo::x64RegisterInfo() {
     };
 
     m_registerClasses = {
-        // {registers}, size, alignment
         {{RAX, RBX, RCX, RDX, RSI, RDI, RBP, RSP, R8, R9, R10, R11, R12, R13, R14, R15, RIP}, 8, 8},
         {{EAX, EBX, ECX, EDX, ESI, EDI, EBP, ESP, R8D, R9D, R10D, R11D, R12D, R13D, R14D, R15D}, 4, 4},
         {{AX, BX, CX, DX, SI, DI, BP, SP, R8W, R9W, R10W, R11W, R12W, R13W, R14W, R15W}, 2, 2},
@@ -111,7 +110,6 @@ x64RegisterInfo::x64RegisterInfo() {
     };
 
     m_subRegIndexDescs = {
-        // name offset (bits) size (bits)
         {"Sub8Bit", 0, 8},
         {"Sub8BitHi", 8, 8},
         {"Sub16Bit", 0, 16},
@@ -119,11 +117,7 @@ x64RegisterInfo::x64RegisterInfo() {
     };
 }
 
-// ex. get EAX from RAX: subRegTable[RAX][Sub32Bit]
-// ex. get AL from RAX: subRegTable[RAX][Sub8Bit]
 static const uint32_t s_subRegTable[Count][4] = {
-    // Sub8Bit     Sub8BitHi   Sub16Bit   Sub32Bit
-
     /* RAX   */ { AL,   AH,     AX,        EAX },
     /* RBX   */ { BL,   BH,     BX,        EBX },
     /* RCX   */ { CL,   CH,     CX,        ECX },

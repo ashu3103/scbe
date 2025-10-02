@@ -442,17 +442,14 @@ MIR::Operand* AArch64InstructionInfo::getImmediate(MIR::Block* block, size_t& po
     RegisterClass rclass = is32 ? GPR32 : GPR64;
     MIR::Register* dest = m_registerInfo->getRegister(getRegisterInfo()->getReservedRegisters(rclass).back());
 
-    // Decide whether movn or movz is better (smaller encoding maybe)
     bool useMovn = (~value & 0xFFFF) < (value & 0xFFFF);
     uint64_t base = useMovn ? ~value : value;
 
-    // Determine opcode
     Opcode movz = is32 ? Opcode::Movz32ri : Opcode::Movz64ri;
     Opcode movn = is32 ? Opcode::Movn32ri : Opcode::Movn64ri;
     Opcode movk = is32 ? Opcode::Movk32ri : Opcode::Movk64ri;
 
 
-    // Emit initial movz/movn
     for (int i = 0; i < (is32 ? 2 : 4); ++i) {
         uint16_t chunk = (base >> (16 * i)) & 0xFFFF;
         MIR::Operand* shift = m_ctx->getImmediateInt(i * 16, MIR::ImmediateInt::imm8, ShiftLeft);
@@ -465,7 +462,6 @@ MIR::Operand* AArch64InstructionInfo::getImmediate(MIR::Block* block, size_t& po
         }
     }
 
-    // Emit movk for remaining chunks
     for (int i = 0; i < (is32 ? 2 : 4); ++i) {
         MIR::Operand* shift = m_ctx->getImmediateInt(i * 16, MIR::ImmediateInt::imm8, ShiftLeft);
         uint16_t chunk = (value >> (16 * i)) & 0xFFFF;

@@ -7,7 +7,7 @@ namespace scbe {
 class Context;
 }
 
-namespace scbe::Codegen {
+namespace scbe::IR {
 
 class ConstantFolder : public InstructionPass {
 public:

@@ -7,8 +7,6 @@ namespace scbe::Target::AArch64 {
 
 AArch64RegisterInfo::AArch64RegisterInfo() {
     m_registerDescs = {
-        // General-purpose registers: Xn with Wn subregs
-        // name, superRegs, subRegs, aliasRegs, regClass
         { "x0",  {}, {W0}, {W0}, GPR64 },
         { "x1",  {}, {W1}, {W1}, GPR64 },
         { "x2",  {}, {W2}, {W2}, GPR64 },
@@ -179,7 +177,6 @@ AArch64RegisterInfo::AArch64RegisterInfo() {
     };
 
     m_registerClasses = {
-        // {registers}, size, alignment
         {{X0, X1, X2, X3, X4, X5, X6, X7, X8, X9, X10, X11, X12, X13, X14, X15, X16, X17, X18, X19, X20, X21, X22, X23, X24, X25, X26, X27, X28, X29, X30, SP, XZR}, 8, 8},
         {{W0, W1, W2, W3, W4, W5, W6, W7, W8, W9, W10, W11, W12, W13, W14, W15, W16, W17, W18, W19, W20, W21, W22, W23, W24, W25, W26, W27, W28, W29, W30, WZR}, 4, 4},
         {{Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7, Q8, Q9, Q10, Q11, Q12, Q13, Q14, Q15, Q16, Q17, Q18, Q19, Q20, Q21, Q22, Q23, Q24, Q25, Q26, Q27, Q28, Q29, Q30, Q31}, 16, 16},
@@ -188,17 +185,13 @@ AArch64RegisterInfo::AArch64RegisterInfo() {
     };
 
     m_subRegIndexDescs = {
-        // name offset (bits) size (bits)
         {"Sub32", 0, 32},
         {"Sub64", 0, 64},
         
     };
 }
 
-// Get W0 from X0: s_subRegTable[X0][Sub32Bit]
-// Get X0 from W0: s_subRegTable[W0][Sub64Bit]
 static const uint32_t s_subRegTable[Count][2] = {
-    // Sub32Bit   Sub64Bit
 
     /* X0  */ { W0,   X0 },
     /* X1  */ { W1,   X1 },
@@ -229,13 +222,13 @@ static const uint32_t s_subRegTable[Count][2] = {
     /* X26 */ { W26,  X26 },
     /* X27 */ { W27,  X27 },
     /* X28 */ { W28,  X28 },
-    /* FP  */ { W29,  X29 }, // X29 = FP
-    /* WZR  */ { WZR,  XZR }, // X30 = LR
+    /* FP  */ { W29,  X29 },
+    /* WZR  */ { WZR,  XZR },
 };
 
 static const std::vector<uint32_t> s_callerSavedRegisters = {
-    X0, X1, X2, X3, X4, X5, X6, X7,  // argument / return registers
-    X9, X10, X11, X12, X13, X14, X15 // temporary registers
+    X0, X1, X2, X3, X4, X5, X6, X7,
+    X9, X10, X11, X12, X13, X14, X15
 };
 
 static const std::vector<uint32_t> s_calleeSavedRegisters = {
@@ -260,10 +253,9 @@ static const std::vector<uint32_t> s_reservedRegistersFpr128 = {
 static const std::vector<uint32_t> s_availableRegistersGpr64 = {
     X0, X1, X2, X3, X4, X5, X6, X7,
     X8, X9, X10, X11, X12, X13,
-    X16, X17, // optional if you use them
-    X18,      // platform register (optional)
+    X16, X17,
+    X18,
     X19, X20, X21, X22, X23, X24, X25, X26, X27, X28
-    // FP (X29), LR (X30) possibly included depending on usage
 };
 
 static const std::vector<uint32_t> s_availableRegistersGpr32 = {

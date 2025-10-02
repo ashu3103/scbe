@@ -1,11 +1,11 @@
-#include "codegen/constant_folder.hpp"
+#include "IR/constant_folder.hpp"
 #include "IR/builder.hpp"
 #include "IR/instruction.hpp"
 #include "IR/function.hpp"
 #include "IR/block.hpp"
 #include "IR/value.hpp"
 
-namespace scbe::Codegen {
+namespace scbe::IR {
 
 bool ConstantFolder::run(IR::Instruction* instruction) {
     IR::Value* result = nullptr;

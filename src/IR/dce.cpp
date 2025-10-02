@@ -1,13 +1,11 @@
-#include "codegen/dce.hpp"
+#include "IR/dce.hpp"
 #include "IR/function.hpp"
 #include "IR/block.hpp"
 #include "IR/instruction.hpp"
 
 #include <deque>
 
-namespace scbe::Codegen {
-
-using namespace IR;
+namespace scbe::IR {
 
 bool DeadCodeElimination::run(IR::Function* function) {
     std::deque<Instruction*> worklist;

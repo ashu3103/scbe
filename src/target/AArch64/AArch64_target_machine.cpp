@@ -1,10 +1,10 @@
-#include "target/AArch64/AArch64_target_machine.hpp"
-#include "codegen/constant_folder.hpp"
-#include "codegen/dag_isel_pass.hpp"
-#include "codegen/dce.hpp"
-#include "codegen/graph_color_regalloc.hpp"
-#include "codegen/mem2reg.hpp"
 #include "data_layout.hpp"
+#include "IR/constant_folder.hpp"
+#include "IR/dce.hpp"
+#include "IR/mem2reg.hpp"
+#include "codegen/dag_isel_pass.hpp"
+#include "codegen/graph_color_regalloc.hpp"
+#include "target/AArch64/AArch64_target_machine.hpp"
 #include "target/AArch64/AArch64_asm_printer.hpp"
 #include "target/AArch64/AArch64_instruction_info.hpp"
 #include "target/AArch64/AArch64_register_info.hpp"
@@ -72,9 +72,9 @@ class AArch64DataLayout : public DataLayout {
 void AArch64TargetMachine::addPassesForCodeGeneration(Ref<PassManager> passManager, std::ofstream& output, FileType type, OptimizationLevel level) {
     if(type == FileType::ObjectFile) throw std::runtime_error("TODO");
     if(level >= OptimizationLevel::O1) {
-        passManager->addPass(std::make_shared<Codegen::Mem2Reg>());
-        passManager->addPass(std::make_shared<Codegen::ConstantFolder>(m_context));
-        passManager->addPass(std::make_shared<Codegen::DeadCodeElimination>());
+        passManager->addPass(std::make_shared<IR::Mem2Reg>());
+        passManager->addPass(std::make_shared<IR::ConstantFolder>(m_context));
+        passManager->addPass(std::make_shared<IR::DeadCodeElimination>());
     }
     passManager->addPass(std::make_shared<Codegen::DagISelPass>(getInstructionInfo(), getRegisterInfo(), getDataLayout(), m_context));
     passManager->addPass(std::make_shared<AArch64TargetLowering>(getRegisterInfo(), getInstructionInfo(), getDataLayout(), m_spec.getOS()));

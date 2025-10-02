@@ -2,7 +2,7 @@
 #include "IR/block.hpp"
 #include "IR/instruction.hpp"
 #include "IR/dominator_tree.hpp"
-#include "codegen/compute_dominators.hpp"
+#include "IR/compute_dominators.hpp"
 #include "unit.hpp"
 
 #include <algorithm>
@@ -110,7 +110,7 @@ void Function::removeInstruction(Instruction* instruction) {
 }
 
 void Function::computeDominatorTree() {
-    Codegen::ComputeDominators().run(this);
+    ComputeDominators().run(this);
     m_dominatorTree = std::make_unique<DominatorTree>(this);
 }
 

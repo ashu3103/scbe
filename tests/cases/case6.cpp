@@ -8,7 +8,6 @@
 using namespace scbe;
 
 bool case6(Target::TargetSpecification& spec, int debug) {
-    // logical shifts and left shift: (3 << 3) >>logical 2  -> (24) >> 2 -> 6
     Unit unit = createUnit("case6");
     auto ctx = unit.getContext();
     auto fnTy = ctx->makeFunctionType({}, ctx->getI32Type());

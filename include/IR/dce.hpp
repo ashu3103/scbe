@@ -2,7 +2,7 @@
 
 #include "pass.hpp"
 
-namespace scbe::Codegen {
+namespace scbe::IR {
 
 class DeadCodeElimination : public FunctionPass {
 public:

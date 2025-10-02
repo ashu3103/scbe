@@ -8,15 +8,12 @@
 
 #include <memory>
 
-namespace scbe::Codegen {
-class ComputeDominators;
-}
-
 namespace scbe::IR {
 
 class Function;
 class Instruction;
 class PhiInstruction;
+class ComputeDominators;
 
 class Block : public GlobalValue {
 public:
@@ -74,7 +71,7 @@ private:
 
 friend class Function;
 friend class Builder;
-friend class Codegen::ComputeDominators;
+friend class IR::ComputeDominators;
 friend class MIR::Block;
 };
 

@@ -1,10 +1,10 @@
-#include "codegen/compute_dominators.hpp"
+#include "IR/compute_dominators.hpp"
 #include "IR/dominator_tree.hpp"
 #include "IR/instruction.hpp"
 #include "IR/function.hpp"
 #include "IR/block.hpp"
 
-namespace scbe::Codegen {
+namespace scbe::IR {
 
 bool ComputeDominators::run(IR::Function* function) {
     //dominators

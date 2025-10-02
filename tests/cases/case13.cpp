@@ -8,8 +8,6 @@
 using namespace scbe;
 
 bool case13(Target::TargetSpecification& spec, int debug) {
-    // Create multiple arithmetic ops and use a merge block:
-    // if (10 > 3) then res = 10+2 else res = 10-4; merge return res -> expect 12
     Unit unit = createUnit("case13");
     auto ctx = unit.getContext();
     auto fnTy = ctx->makeFunctionType({}, ctx->getI32Type());
@@ -39,20 +37,15 @@ bool case13(Target::TargetSpecification& spec, int debug) {
     auto minus = builder.createSub(ten, IR::ConstantInt::get(32, 4, ctx));
     builder.createJump(merge);
 
-    // merge: load whichever value was inserted (we assume previous blocks stored to a local)
     builder.setCurrentBlock(merge);
-    // For simplicity, recompute the chosen expression using the same condition:
-    // if (10>3) return 12 else return 6 -> 12
     auto finalCmp = builder.createICmpGt(ten, three);
     auto retThen = IR::ConstantInt::get(32, 12, ctx);
     auto retElse = IR::ConstantInt::get(32, 6, ctx);
     builder.createCondJump(rthenB, relsB, finalCmp);
 
-    // rthen
     builder.setCurrentBlock(rthenB);
     builder.createRet(retThen);
 
-    // relse
     builder.setCurrentBlock(relsB);
     builder.createRet(retElse);
 

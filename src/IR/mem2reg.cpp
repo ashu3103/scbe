@@ -1,4 +1,4 @@
-#include "codegen/mem2reg.hpp"
+#include "IR/mem2reg.hpp"
 #include "IR/function.hpp"
 #include "IR/block.hpp"
 #include "IR/dominator_tree.hpp"
@@ -8,7 +8,7 @@
 
 #include <queue>
 
-namespace scbe::Codegen {
+namespace scbe::IR {
 
 bool Mem2Reg::run(IR::Function* function) {
     std::vector<IR::AllocateInstruction*> promoted;

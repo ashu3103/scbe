@@ -8,7 +8,6 @@
 using namespace scbe;
 
 bool case3(Target::TargetSpecification& spec, int debug) {
-    // signed comparison: if (-1 < 1) then return 1 else return 0  -> 1
     Unit unit = createUnit("case3");
     auto ctx = unit.getContext();
     auto fnTy = ctx->makeFunctionType({}, ctx->getI32Type());

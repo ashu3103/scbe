@@ -1,9 +1,9 @@
+#include "IR/constant_folder.hpp"
+#include "IR/dce.hpp"
+#include "IR/mem2reg.hpp"
 #include "codegen/coff_object_emitter.hpp"
-#include "codegen/constant_folder.hpp"
-#include "codegen/dce.hpp"
 #include "codegen/elf_object_emitter.hpp"
 #include "codegen/graph_color_regalloc.hpp"
-#include "codegen/mem2reg.hpp"
 #include "codegen/dag_isel_pass.hpp"
 #include "data_layout.hpp"
 #include "target/instruction_info.hpp"
@@ -82,9 +82,9 @@ class x64DataLayout : public DataLayout {
 void x64TargetMachine::addPassesForCodeGeneration(Ref<PassManager> passManager, std::ofstream& output, FileType type, OptimizationLevel level) {
     passManager->addPass(std::make_shared<x64Legalizer>(m_context));
     if(level >= OptimizationLevel::O1) {
-        passManager->addPass(std::make_shared<Codegen::Mem2Reg>());
-        passManager->addPass(std::make_shared<Codegen::ConstantFolder>(m_context));
-        passManager->addPass(std::make_shared<Codegen::DeadCodeElimination>());
+        passManager->addPass(std::make_shared<IR::Mem2Reg>());
+        passManager->addPass(std::make_shared<IR::ConstantFolder>(m_context));
+        passManager->addPass(std::make_shared<IR::DeadCodeElimination>());
     }
     passManager->addPass(std::make_shared<Codegen::DagISelPass>(getInstructionInfo(), getRegisterInfo(), getDataLayout(), m_context));
     passManager->addPass(std::make_shared<x64TargetLowering>(getRegisterInfo(), getInstructionInfo(), getDataLayout(), m_spec.getOS()));
@@ -110,9 +110,9 @@ void x64TargetMachine::addPassesForCodeGeneration(Ref<PassManager> passManager, 
 void x64TargetMachine::addPassesForCodeGeneration(Ref<PassManager> passManager, std::initializer_list<std::reference_wrapper<std::ofstream>> files, std::initializer_list<FileType> type, OptimizationLevel level) {
     passManager->addPass(std::make_shared<x64Legalizer>(m_context));
     if(level >= OptimizationLevel::O1) {
-        passManager->addPass(std::make_shared<Codegen::Mem2Reg>());
-        passManager->addPass(std::make_shared<Codegen::ConstantFolder>(m_context));
-        passManager->addPass(std::make_shared<Codegen::DeadCodeElimination>());
+        passManager->addPass(std::make_shared<IR::Mem2Reg>());
+        passManager->addPass(std::make_shared<IR::ConstantFolder>(m_context));
+        passManager->addPass(std::make_shared<IR::DeadCodeElimination>());
     }
     passManager->addPass(std::make_shared<Codegen::DagISelPass>(getInstructionInfo(), getRegisterInfo(), getDataLayout(), m_context));
     passManager->addPass(std::make_shared<x64TargetLowering>(getRegisterInfo(), getInstructionInfo(), getDataLayout(), m_spec.getOS()));

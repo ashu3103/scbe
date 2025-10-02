@@ -8,7 +8,6 @@
 using namespace scbe;
 
 bool case12(Target::TargetSpecification& spec, int debug) {
-    // multiple branches with ICmpNe: if (5 != 5) -> else branch returns 77
     Unit unit = createUnit("case12");
     auto ctx = unit.getContext();
     auto fnTy = ctx->makeFunctionType({}, ctx->getI32Type());

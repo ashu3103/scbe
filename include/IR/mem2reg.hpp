@@ -6,9 +6,6 @@ namespace scbe::IR {
 class DominatorTree;
 class Block;
 class AllocateInstruction;
-}
-
-namespace scbe::Codegen {
 
 class Mem2Reg : public FunctionPass {
 public:

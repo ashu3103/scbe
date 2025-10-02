@@ -2,7 +2,7 @@
 
 #include "pass.hpp"
 
-namespace scbe::Codegen {
+namespace scbe::IR {
 
 class ComputeDominators : public FunctionPass {
 public:

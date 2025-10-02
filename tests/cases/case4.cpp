@@ -8,7 +8,6 @@
 using namespace scbe;
 
 bool case4(Target::TargetSpecification& spec, int debug) {
-    // unsigned comparison: compare 4000000000 (unsigned) > 100 -> true
     Unit unit = createUnit("case4");
     auto ctx = unit.getContext();
     auto fnTy = ctx->makeFunctionType({}, ctx->getI32Type());
