@@ -154,7 +154,7 @@ MIR::Operand* emitStoreInPtrRegister(EMITTER_ARGS) {
     MIR::Register* fromRr = cast<MIR::Register>(from);
     uint32_t classid = instrInfo->getRegisterInfo()->getRegisterIdClass(rr->getId(), block->getParentFunction()->getRegisterInfo());
     op = (Opcode)selectOpcode(rinfo->getRegisterClass(classid).getSize(), classid == FPR64 || classid == FPR32, {OPCODE(Store32rm), OPCODE(Store32rm), OPCODE(Store32rm), OPCODE(Store64rm)}, {OPCODE(Store32rm), OPCODE(Store64rm)});
-    aInstrInfo->registerMemoryOp(block, block->last(), op, fromRr, rr, (size_t)0);
+    aInstrInfo->registerMemoryOp(block, block->last(), op, fromRr, rr, (int64_t)0);
 
     return nullptr;
 }
@@ -198,7 +198,7 @@ MIR::Operand* emitLoadFromPtrRegister(EMITTER_ARGS) {
     auto rr = cast<MIR::Register>(isel->emitOrGet(i->getOperands().at(0), block));
     AArch64InstructionInfo* aInstrInfo = (AArch64InstructionInfo*)instrInfo;
     if(result->isRegister()) {
-        aInstrInfo->registerMemoryOp(block, block->last(), op, cast<MIR::Register>(result), rr, (size_t)0);
+        aInstrInfo->registerMemoryOp(block, block->last(), op, cast<MIR::Register>(result), rr, (int64_t)0);
     }
     else if(result->isMultiValue()) {
         MIR::MultiValue* multi = cast<MIR::MultiValue>(result);

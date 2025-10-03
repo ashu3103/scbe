@@ -544,7 +544,7 @@ size_t AArch64InstructionInfo::getSymbolValue(MIR::Block* block, size_t pos, MIR
     block->addInstruction(instr((uint32_t)Opcode::Adrp, tmp, symbol));
     size_t total = 1;
     MIR::Symbol* symbolLow = cast<MIR::Symbol>(block->getParentFunction()->cloneOpWithFlags(symbol, ExprModLow12));
-    total += registerMemoryOp(block, block->last(), Opcode::Load64rm, dst, tmp, (size_t)0, Indexing::None, symbolLow);
+    total += registerMemoryOp(block, block->last(), Opcode::Load64rm, dst, tmp, (int64_t)0, Indexing::None, symbolLow);
     return total;
 }
 
