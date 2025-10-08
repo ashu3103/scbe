@@ -7,6 +7,7 @@
 
 namespace scbe {
 class Context;
+class DataLayout;
 }
 
 namespace scbe::IR {
@@ -21,12 +22,12 @@ public:
         ConstantString,
         ConstantStruct,
         ConstantArray,
-        ConstantZero,
         Block,
         Function,
         Register,
         FunctionArgument,
-        GlobalVariable
+        GlobalVariable,
+        UndefValue
     };
 
     virtual ~Value() {}
@@ -50,7 +51,7 @@ public:
     bool isRegister() const { return m_kind == ValueKind::Register; }
     bool isFunctionArgument() const { return m_kind == ValueKind::FunctionArgument; }
     bool isGlobalVariable() const { return m_kind == ValueKind::GlobalVariable; }
-    bool isZeroInitializer() const { return m_kind == ValueKind::ConstantZero; }
+    bool isUndefValue() const { return m_kind == ValueKind::UndefValue; }
 
     bool isConstant() const { return m_kind >= ValueKind::ConstantInt && m_kind <= ValueKind::ConstantArray; }
 
@@ -65,11 +66,12 @@ protected:
     std::vector<Instruction*> m_uses;
 
 friend class Function;
+friend class FunctionInlining;
 };
 
 class Constant : public Value {
 public:
-    static Constant* getZeroInitalizer(Type* type, Ref<Context> context);
+    static Constant* getZeroInitalizer(Type* type, DataLayout* layout, Ref<Context> context);
 
 protected:
     Constant(Type* type, ValueKind kind, const std::string& name = "") : Value(name, type, kind) {}
@@ -124,32 +126,33 @@ private:
 friend class scbe::Context;
 };
 
-class ConstantStruct : public Constant {
+class ConstantMultiple : public Constant {
 public:
-    static ConstantStruct* get(StructType* type, const std::vector<Constant*>& values, Ref<Context> context);
-
     const std::vector<Constant*>& getValues() const { return m_values; }
 
 protected:
-    ConstantStruct(StructType* type, const std::vector<Constant*>& values) : Constant(type, ValueKind::ConstantStruct), m_values(values) {}
-
+    ConstantMultiple(ValueKind kind, Type* type, const std::vector<Constant*>& values) : Constant(type, kind), m_values(values) {}
+    
 private:
     std::vector<Constant*> m_values;
+};
+
+class ConstantStruct : public ConstantMultiple {
+public:
+    static ConstantStruct* get(StructType* type, const std::vector<Constant*>& values, Ref<Context> context);
+
+protected:
+    ConstantStruct(StructType* type, const std::vector<Constant*>& values) : ConstantMultiple(ValueKind::ConstantStruct, type, values) {}
 
 friend class scbe::Context;
 };
 
-class ConstantArray : public Constant {
+class ConstantArray : public ConstantMultiple {
 public:
     static ConstantArray* get(ArrayType* type, const std::vector<Constant*>& values, Ref<Context> context);
 
-    const std::vector<Constant*>& getValues() const { return m_values; }
-
 protected:
-    ConstantArray(ArrayType* type, const std::vector<Constant*>& values) : Constant(type, ValueKind::ConstantArray), m_values(values) {}
-
-private:
-    std::vector<Constant*> m_values;
+    ConstantArray(ArrayType* type, const std::vector<Constant*>& values) : ConstantMultiple(ValueKind::ConstantArray, type, values) {}
 
 friend class scbe::Context;
 };
@@ -162,6 +165,16 @@ public:
 
 private:
     uint32_t m_slot = 0;
+};
+
+class UndefValue : public Constant {
+public:
+    static UndefValue* get(Type* type, Ref<Context> context);
+
+protected:
+    UndefValue(Type* type) : Constant(type, ValueKind::UndefValue) {}
+
+friend class scbe::Context;
 };
 
 }

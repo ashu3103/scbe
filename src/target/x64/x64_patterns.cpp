@@ -871,7 +871,7 @@ MIR::Operand* emitGEP(EMITTER_ARGS) {
     ISel::DAG::Instruction* i = cast<ISel::DAG::Instruction>(node);
     MIR::Register* ret = cast<MIR::Register>(isel->emitOrGet(i->getResult(), block));
     MIR::Operand* base = isel->emitOrGet(i->getOperands().at(0), block);
-    Type* curType = ((Value*)i->getOperands().at(0))->getType();
+    Type* curType = ((Value*)extractOperand(i->getOperands().at(0)))->getType();
     int64_t curOff = 0;
 
     if(base->getKind() == MIR::Operand::Kind::FrameIndex) {
@@ -898,6 +898,7 @@ MIR::Operand* emitGEP(EMITTER_ARGS) {
     }
 
     x64InstructionInfo* xInstrInfo = (x64InstructionInfo*)instrInfo;
+    if(curOff == 0) return base;
     block->addInstruction(xInstrInfo->memoryToOperand(OPCODE(Lea64rm), ret, cast<MIR::Register>(base), curOff));
     return ret;
 }

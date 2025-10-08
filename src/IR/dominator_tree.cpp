@@ -12,4 +12,10 @@ DominatorTree::DominatorTree(Function* function) {
     }
 }
 
+bool DominatorTree::dominates(Block* dominator, Block* dominated) const {
+    if(!hasChildren(dominator)) return false;
+    auto& children = m_dominatorTree.at(dominator);
+    return std::find(children.begin(), children.end(), dominated) != children.end();
+}
+
 }

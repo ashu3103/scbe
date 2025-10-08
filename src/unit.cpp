@@ -58,5 +58,11 @@ IR::GlobalVariable* Unit::createGlobalVariable(Type* type, IR::Constant* value, 
     return IR::GlobalVariable::get(*this, m_ctx->makePointerType(type), value, IR::Linkage::External, name);
 }
 
+size_t Unit::getIRInstructionSize() const {
+    size_t size = 0;
+    for(const auto& func : m_functions)
+        size += func->getInstructionSize();
+    return size;
+}
 
 }

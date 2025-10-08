@@ -27,9 +27,8 @@ public:
     void remove(uint32_t id) {
         for(uint32_t idx = 0; idx < m_nodes.size(); idx++) {
             auto& node = m_nodes[idx];
-            std::vector<uint32_t>::iterator position = std::find(node->m_connections.begin(), node->m_connections.end(), id);
-            if (position != node->m_connections.end())
-                node->m_connections.erase(position);
+            if (node->m_connections.contains(id))
+                node->m_connections.erase(id);
         }
 
         m_nodes.erase(std::remove_if(m_nodes.begin(), m_nodes.end(), [&](auto& node) { return node->m_id == id; }), m_nodes.end());
@@ -92,78 +91,81 @@ Ref<GraphColorRegalloc::Block> GraphColorRegalloc::generateGraph(MIR::Block* cur
 void GraphColorRegalloc::analyze(MIR::Function* function) {
     auto blocks = computeLiveRanges(function);
 
+    ColorGraph graph;
+    std::unordered_set<uint32_t> visited;
     for(auto block : blocks) {
-        ColorGraph graph;
         // since we can have more than one live range for a register, but we only want one graph node
         // per register, we process them once, getOverlaps will calculate the overlaps accounting for every live range
         // so there's still advantage to this, maybe in the future i will make it so live ranges for a vreg can have more than
         // one physical register, but not for now
-        std::unordered_set<uint32_t> visited;
         for(auto range : block->m_rangeVector) {
-            if(visited.contains(range->m_id))
-                continue;
-            visited.insert(range->m_id);
             if(m_registerInfo->isPhysicalRegister(range->m_id)) continue;
+            if(visited.contains(range->m_id)) {
+                auto node = graph.find(range->m_id);
+                auto overlaps = getOverlaps(range->m_id, block->m_liveRanges, block->m_mirBlock);
+                node->m_connections.insert(overlaps.begin(), overlaps.end());
+                continue;
+            }
+            visited.insert(range->m_id);
 
             auto node = std::make_shared<GraphNode>();
             node->m_id = range->m_id;
             node->m_connections = getOverlaps(range->m_id, block->m_liveRanges, block->m_mirBlock);
             graph.addNode(node);
         }
-        graph.sort();
+    }
+    graph.sort();
 
-        std::vector<Ref<GraphNode>> workStack;
-        while(!graph.empty()) {
-            bool removed = false;
-            for(auto node : graph.getNodes()) {
-                MIR::VRegInfo info = function->getRegisterInfo().getVirtualRegisterInfo(node->m_id);
-                if(getVirtualConnectionCount(node->m_connections, m_registerInfo) >= m_registerInfo->getAvailableRegisters(info.m_class).size()) continue;
-                workStack.push_back(node);
-                graph.remove(node->m_id);
-                removed = true;
+    std::vector<Ref<GraphNode>> workStack;
+    while(!graph.empty()) {
+        bool removed = false;
+        for(auto node : graph.getNodes()) {
+            MIR::VRegInfo info = function->getRegisterInfo().getVirtualRegisterInfo(node->m_id);
+            if(getVirtualConnectionCount(node->m_connections, m_registerInfo) >= m_registerInfo->getAvailableRegisters(info.m_class).size()) continue;
+            workStack.push_back(node);
+            graph.remove(node->m_id);
+            removed = true;
+            break;
+        }
+
+        if(!removed) {
+            auto node = graph.mostRelevantNode();
+            graph.remove(node->m_id);
+            function->getRegisterInfo().addSpill(node->m_id);
+        }
+    }
+
+    while(!workStack.empty()) {
+        Ref<GraphNode> popped = workStack.back();
+        workStack.pop_back();
+
+        MIR::VRegInfo info = function->getRegisterInfo().getVirtualRegisterInfo(popped->m_id);
+        for(auto phys : m_registerInfo->getAvailableRegisters(info.m_class)) {
+            bool found = false;
+            for(uint32_t conn : popped->m_connections) {
+                if(m_registerInfo->isPhysicalRegister(conn)) {
+                    if(m_registerInfo->isSameRegister(conn, phys)) {
+                        found = true;
+                        break;
+                    }
+                    continue;
+                }
+                auto node = graph.find(conn);
+                if(!m_registerInfo->isSameRegister(node->m_physicalRegister, phys)) continue;
+                found = true;
                 break;
             }
 
-            if(!removed) {
-                auto node = graph.mostRelevantNode();
-                graph.remove(node->m_id);
-                function->getRegisterInfo().addSpill(node->m_id);
+            if(!found) {
+                popped->m_physicalRegister = phys;
+                break;
             }
         }
 
-        while(!workStack.empty()) {
-            Ref<GraphNode> popped = workStack.back();
-            workStack.pop_back();
-
-            MIR::VRegInfo info = function->getRegisterInfo().getVirtualRegisterInfo(popped->m_id);
-            for(auto phys : m_registerInfo->getAvailableRegisters(info.m_class)) {
-                bool found = false;
-                for(uint32_t conn : popped->m_connections) {
-                    if(m_registerInfo->isPhysicalRegister(conn)) {
-                        if(m_registerInfo->isSameRegister(conn, phys)) {
-                            found = true;
-                            break;
-                        }
-                        continue;
-                    }
-                    auto node = graph.find(conn);
-                    if(!m_registerInfo->isSameRegister(node->m_physicalRegister, phys)) continue;
-                    found = true;
-                    break;
-                }
-
-                if(!found) {
-                    popped->m_physicalRegister = phys;
-                    break;
-                }
-            }
-
-            graph.addNode(popped);
-        }
-
-        for(auto node : graph.getNodes()) {
-            function->getRegisterInfo().setVPMapping(node->m_id, node->m_physicalRegister);
-        }
+        graph.addNode(popped);
+    }
+    for(auto node : graph.getNodes()) {
+        function->getRegisterInfo().setVPMapping(node->m_id, node->m_physicalRegister);
     }
 }
 
@@ -312,8 +314,8 @@ void GraphColorRegalloc::propagate(Ref<GraphColorRegalloc::Block> root, std::uno
         propagate(conn, visited);
 }
 
-std::vector<uint32_t> GraphColorRegalloc::getOverlaps(uint32_t id, const std::unordered_map<uint32_t, std::vector<Ref<MIR::LiveRange>>>& ranges, MIR::Block* block) {
-    std::vector<uint32_t> ret;
+USet<uint32_t> GraphColorRegalloc::getOverlaps(uint32_t id, const std::unordered_map<uint32_t, std::vector<Ref<MIR::LiveRange>>>& ranges, MIR::Block* block) {
+    USet<uint32_t> ret;
     std::unordered_set<uint32_t> visitedCmp;
     for(auto& my : ranges.at(id)) {
         std::pair<size_t, size_t> first = {block->getParentFunction()->getInstructionIdx(my->m_instructionRange.first), block->getParentFunction()->getInstructionIdx(my->m_instructionRange.second)};
@@ -332,12 +334,12 @@ std::vector<uint32_t> GraphColorRegalloc::getOverlaps(uint32_t id, const std::un
         }
     }
     for(auto& v : visitedCmp)
-        ret.push_back(v);
+        ret.insert(v);
 
     return ret;
 }
 
-uint32_t GraphColorRegalloc::getVirtualConnectionCount(const std::vector<uint32_t>& connections, Target::RegisterInfo* registerInfo) const {
+uint32_t GraphColorRegalloc::getVirtualConnectionCount(const USet<uint32_t>& connections, Target::RegisterInfo* registerInfo) const {
     uint32_t count = 0;
     for(auto& conn : connections) {
         if(registerInfo->isPhysicalRegister(conn)) continue;

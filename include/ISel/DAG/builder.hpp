@@ -13,17 +13,11 @@ class Builder {
 public:
     ~Builder();
 
+    Root* getRoot() { return m_root; }
     void setRoot(Root* root) { m_root = root; }
     void insert(std::unique_ptr<Node> node);
 
     std::unique_ptr<Root> createRoot(const std::string& name);
-    Chain* createLoad(FrameIndex* ptr, Value* ret);
-    Chain* createStore(FrameIndex* ptr, Node* value);
-    Chain* createReturn(Node* value = nullptr);
-    Chain* createCondJump(Root* first, Root* second, Node* cond);
-    Chain* createJump(Root* to);
-    Chain* createCall(Value* result, Node* callee, const std::vector<Node*>& args, bool isResultUsed);
-    Chain* createSwitch(Node* value, Root* defaultCase, const std::vector<std::pair<Node*, Root*>>& cases);
 
     Node* createAdd(Node* lhs, Node* rhs, Register* reg);
     Node* createSub(Node* lhs, Node* rhs, Register* reg);
@@ -71,7 +65,7 @@ public:
     Node* createFMul(Node* lhs, Node* rhs, Register* reg);
 
 private:
-    Root* m_root;
+    Root* m_root = nullptr;
 };
 
 }

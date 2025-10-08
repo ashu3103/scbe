@@ -438,30 +438,18 @@ void Builder::createCondJump(Block* first, Block* second, Value* cond) {
     auto instr = std::make_unique<JumpInstruction>(first, second, cond);
     auto ret = instr.get();
 	insert(std::move(instr));
-    m_currentBlock->addSuccessor(first);
-    m_currentBlock->addSuccessor(second);
-    first->addPredecessor(m_currentBlock);
-    second->addPredecessor(m_currentBlock);
 }
 
 void Builder::createJump(Block* to) {
     auto instr = std::make_unique<JumpInstruction>(to);
     auto ret = instr.get();
 	insert(std::move(instr));
-    m_currentBlock->addSuccessor(to);
-    to->addPredecessor(m_currentBlock);
 }
 
 void Builder::createSwitch(Value* value, Block* defaultBlock, const std::vector<std::pair<ConstantInt*, Block*>>& cases) {
     auto instr = std::make_unique<SwitchInstruction>(value, defaultBlock, cases);
     auto ret = instr.get();
 	insert(std::move(instr));
-    m_currentBlock->addSuccessor(defaultBlock);
-    defaultBlock->addPredecessor(m_currentBlock);
-    for(auto casePair : cases) {
-        m_currentBlock->addSuccessor(casePair.second);
-        casePair.second->addPredecessor(m_currentBlock);
-    }
 }
 
 void Builder::insert(std::unique_ptr<Instruction> instruction) {
@@ -472,7 +460,10 @@ void Builder::insert(std::unique_ptr<Instruction> instruction) {
         return;
     }
 
-    m_currentBlock->addInstructionAfter(std::move(instruction), m_insertPoint);
+    if(m_insertBefore)
+        m_currentBlock->addInstructionBefore(std::move(instruction), m_insertPoint);
+    else
+        m_currentBlock->addInstructionAfter(std::move(instruction), m_insertPoint);
     m_insertPoint = instruction.get();
 }
 

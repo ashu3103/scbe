@@ -184,23 +184,25 @@ void AArch64TargetLowering::lowerFunction(MIR::Function* function) {
     }
     function->setFunctionPrologueSize(entryBlock->getInstructions().size() - beg);
 
-    for(auto& bb : function->getBlocks()) {
-        if(!bb->isTerminator(m_instructionInfo))
-            continue;
+    for(MIR::Instruction* ret : m_returnInstructions) {
+        MIR::Block* bb = ret->getParentBlock();
+        size_t idx = bb->getInstructionIdx(ret);
 
         if(size > 0) {
-            MIR::Operand* sizeOp = aInstrInfo->getImmediate(bb.get(), ctx->getImmediateInt(size, immSizeFromValue(size)));
+            MIR::Operand* sizeOp = aInstrInfo->getImmediate(bb, idx, ctx->getImmediateInt(size, immSizeFromValue(size)));
             if(sizeOp->isRegister()) {
                 MIR::Register* sizeReg = cast<MIR::Register>(sizeOp);
                 sizeReg = m_registerInfo->getRegister(aInstrInfo->getRegisterInfo()->getRegisterWithSize(sizeReg->getId(), 8).value());
-                bb->addInstructionBeforeTerminator(instr((uint32_t)Opcode::Add64rr, m_registerInfo->getRegister(SP), m_registerInfo->getRegister(SP), sizeReg));
+                bb->addInstructionAt(instr((uint32_t)Opcode::Add64rr, m_registerInfo->getRegister(SP), m_registerInfo->getRegister(SP), sizeReg), idx++);
             }
             else {
-                bb->addInstructionBeforeTerminator(instr((uint32_t)Opcode::Add64ri, m_registerInfo->getRegister(SP), m_registerInfo->getRegister(SP), sizeOp));
+                bb->addInstructionAt(instr((uint32_t)Opcode::Add64ri, m_registerInfo->getRegister(SP), m_registerInfo->getRegister(SP), sizeOp), idx++);
             }
         }
-        aInstrInfo->registersMemoryOp(bb.get(), bb->last() == 0 ? 0 : bb->last() - 1, Opcode::LoadP64rm, {m_registerInfo->getRegister(X29), m_registerInfo->getRegister(X30)}, m_registerInfo->getRegister(SP), 16, Indexing::PostIndexed);
+        idx += aInstrInfo->registersMemoryOp(bb, idx, Opcode::LoadP64rm, {m_registerInfo->getRegister(X29), m_registerInfo->getRegister(X30)}, m_registerInfo->getRegister(SP), 16, Indexing::PostIndexed);
     }
+
+    m_returnInstructions.clear();
 }
 
 void AArch64TargetLowering::lowerSwitch(MIR::Block* block, MIR::SwitchLowering* lowering) {
@@ -325,7 +327,9 @@ void AArch64TargetLowering::lowerReturn(MIR::Block* block, MIR::ReturnLowering* 
         }
     }
 
-    block->addInstructionAt(instr((uint32_t)Opcode::Ret), inIdx++);
+    auto ret = instr((uint32_t)Opcode::Ret);
+    m_returnInstructions.push_back(ret.get());
+    block->addInstructionAt(std::move(ret), inIdx++);
 }
 
 }

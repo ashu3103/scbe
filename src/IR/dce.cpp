@@ -21,14 +21,13 @@ bool DeadCodeElimination::run(IR::Function* function) {
         Instruction* inst = worklist.back();
         worklist.pop_back();
 
-        inst->getParentBlock()->removeInstruction(inst);
-
         for (Value* op : inst->getOperands()) {
             if (Instruction* opInst = dyn_cast<Instruction>(op)) {
                 if (isDead(opInst))
                     worklist.push_back(opInst);
             }
         }
+        inst->getParentBlock()->removeInstruction(inst);
     }
 
     return changed;

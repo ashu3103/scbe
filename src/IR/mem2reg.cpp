@@ -38,6 +38,20 @@ bool Mem2Reg::run(IR::Function* function) {
             PointerType* pointerType = (PointerType*)alloca->getType();
             std::unique_ptr<IR::PhiInstruction> phi = std::make_unique<IR::PhiInstruction>(pointerType->getPointee(), alloca);
             need->setPhiForValue(alloca, phi.get());
+            
+            IR::Instruction* lastPhi = nullptr;
+            for(auto it = need->getInstructions().rbegin(); it != need->getInstructions().rend(); ++it) {
+                auto& instruction = *it;
+                if(instruction->getOpcode() == IR::Instruction::Opcode::Phi) {
+                    lastPhi = instruction.get();
+                    break;
+                }
+            }
+            
+            if(lastPhi) {
+                need->addInstructionAfter(std::move(phi), lastPhi);
+                continue;
+            }
             need->addInstructionAtFront(std::move(phi));
         }
     }
@@ -48,7 +62,7 @@ bool Mem2Reg::run(IR::Function* function) {
     for(IR::AllocateInstruction* alloca : promoted)
         alloca->getParentBlock()->removeInstruction(alloca);
     
-    return true;
+    return promoted.size() > 0;
 }
 
 void Mem2Reg::rename(IR::DominatorTree* tree, IR::Block* current, UMap<IR::Value*, std::vector<IR::Value*>>& stack, const std::vector<IR::AllocateInstruction*>& promoted) {
@@ -56,13 +70,6 @@ void Mem2Reg::rename(IR::DominatorTree* tree, IR::Block* current, UMap<IR::Value
     for(IR::AllocateInstruction* alloca : promoted) {
         stackSize[alloca] = stack[alloca].size();
     }
-
-    // for (auto inst : current->getInstructions()) {
-    //     if (inst->getOpcode() == IR::Instruction::Opcode::Phi) {
-    //         auto phi = std::static_pointer_cast<IR::PhiInstruction>(inst);
-    //         stack[phi->getAlloca()].push_back(phi);
-    //     }
-    // }
 
     std::vector<IR::Instruction*> toRemove;
     for(auto& instruction : current->getInstructions()) {
@@ -84,20 +91,22 @@ void Mem2Reg::rename(IR::DominatorTree* tree, IR::Block* current, UMap<IR::Value
         current->removeInstruction(instruction);
     }
 
+    if(tree->hasChildren(current)) {
+        for(IR::Block* child : tree->getChildren(current)) {
+            rename(tree, child, stack, promoted);
+        }
+    }
+
     for(auto& pair : current->getSuccessors()) {
         IR::Block* successor = pair.first;
         for(IR::AllocateInstruction* promotedAlloca : promoted) {
             if(!successor->getPhiForValues().contains(promotedAlloca)) continue;
 
             IR::PhiInstruction* phi = successor->getPhiForValues().at(promotedAlloca);
-            phi->addOperand(stack[promotedAlloca].back());
+            IR::Value* op = !stack.at(promotedAlloca).empty() ? stack.at(promotedAlloca).back() :
+                IR::UndefValue::get(cast<PointerType>(promotedAlloca->getType())->getPointee(), m_context);
+            phi->addOperand(op);
             phi->addOperand(current);
-        }
-    }
-
-    if(tree->hasChildren(current)) {
-        for(IR::Block* child : tree->getChildren(current)) {
-            rename(tree, child, stack, promoted);
         }
     }
 

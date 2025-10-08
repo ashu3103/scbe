@@ -5,10 +5,14 @@
 
 #include <cassert>
 
+#define CLONE(ty) virtual std::unique_ptr<Instruction> clone() override { auto ins = std::make_unique<ty>(*this); ins->cloneInternal(); return ins; }
+
 namespace scbe::IR {
 
 class Block;
 class Function;
+
+using ValueMap = UMap<const Value*, Value*>;
 
 class Instruction : public Value {
 public:
@@ -77,7 +81,7 @@ public:
     Value* getOperand(uint32_t index) const { return m_operands[index]; }
     const std::vector<Value*>& getOperands() const { return m_operands; }
     void addOperand(Value* operand) { m_operands.push_back(operand); operand->addUse(this); }
-    void removeOperand(Value* operand) { m_operands.erase(std::find(m_operands.begin(), m_operands.end(), operand)); operand->removeFromUses(this); }
+    virtual void removeOperand(Value* operand) { m_operands.erase(std::find(m_operands.begin(), m_operands.end(), operand)); operand->removeFromUses(this); }
     size_t getNumOperands() const { return m_operands.size(); }
 
     IR::Block* getParentBlock() const { return m_parentBlock; }
@@ -88,6 +92,13 @@ public:
     bool isJump() const { return m_opcode == Opcode::Jump; }
     bool isTerminator() const { return m_opcode == Opcode::Ret || isJump(); }
 
+    virtual std::unique_ptr<Instruction> clone() { auto ins = std::make_unique<Instruction>(*this); ins->cloneInternal(); return ins; }
+    virtual void onAdd() {};
+    virtual void beforeRemove(Block* from);
+
+protected:
+    void cloneInternal();
+
 protected:
     Opcode m_opcode;
     std::vector<Value*> m_operands;
@@ -95,6 +106,7 @@ protected:
 
 friend class Block;
 friend class Function;
+friend class FunctionInlining;
 };
 
 class BinaryOperator : public Instruction {
@@ -113,6 +125,8 @@ public:
 
     Value* getLHS() const { return getOperand(0); }
     Value* getRHS() const { return getOperand(1); }
+
+    CLONE(BinaryOperator)
 };
 
 class LoadInstruction : public Instruction {
@@ -123,6 +137,8 @@ public:
         addOperand(ptr);
     }
     Value* getPointer() const { return getOperand(0); }
+
+    CLONE(LoadInstruction)
 };
 
 class StoreInstruction : public Instruction {
@@ -132,22 +148,34 @@ public:
         assert(!value->isConstantArray() && !value->isConstantStruct() && "Cannot store complex values. Use a memcpy or manual copy");
         addOperand(ptr); addOperand(value);
     }
+    CLONE(StoreInstruction)
 };
 
 class AllocateInstruction : public Instruction {
 public:
     AllocateInstruction(Type* type, std::string name = "") : Instruction(Opcode::Allocate, type, name) {}
+
+    virtual void onAdd() override;
+    virtual void beforeRemove(Block* from) override;
+
+    CLONE(AllocateInstruction)
 };
 
 class ReturnInstruction : public Instruction {
 public:
     ReturnInstruction(Value* value = nullptr) : Instruction(Opcode::Ret, nullptr, "") { if(value) addOperand(value); }
+
+    CLONE(ReturnInstruction)
 };
 
 class JumpInstruction : public Instruction {
 public:
     JumpInstruction(Block* first, Block* second, Value* value);
     JumpInstruction(Block* first);
+
+    virtual void onAdd() override;
+    virtual void beforeRemove(Block* from) override;
+    CLONE(JumpInstruction)
 };
 
 class PhiInstruction : public Instruction {
@@ -155,6 +183,9 @@ public:
     PhiInstruction(Type* type, Value* alloca, std::string name = "") : Instruction(Opcode::Phi, type, name), m_alloca(alloca) {}
 
     Value* getAlloca() const { return m_alloca; }
+
+    virtual void removeOperand(Value* op) override;
+    CLONE(PhiInstruction)
 protected:
     Value* m_alloca;
 };
@@ -169,6 +200,8 @@ public:
         }
     }
     Value* getPointer() const { return getOperand(0); }
+
+    CLONE(GEPInstruction)
 };
 
 class CallInstruction : public Instruction {
@@ -178,12 +211,16 @@ public:
 
     Value* getCallee() const { return m_operands.at(0); }
     std::span<Value* const> getArguments() const { return { m_operands.data() + 1, m_operands.size() - 1 }; }
+
+    CLONE(CallInstruction)
 };
 
 class CastInstruction : public Instruction {
 public:
     CastInstruction(Opcode opcode, Value* value, Type* type, std::string name = "") : Instruction(opcode, type, name) { addOperand(value); }
     Value* getValue() const { return getOperand(0); }
+
+    CLONE(CastInstruction)
 };
 
 class SwitchInstruction : public Instruction {
@@ -193,6 +230,10 @@ public:
     Value* getCondition() const { return getOperand(0); }
     Block* getDefaultCase() const;
     std::vector<std::pair<ConstantInt*, Block*>> getCases() const;
+
+    CLONE(SwitchInstruction)
+    virtual void onAdd() override;
+    virtual void beforeRemove(Block* from) override;
 };
 
 class ExtractValueInstruction : public Instruction {
@@ -200,6 +241,8 @@ public:
     ExtractValueInstruction(Value* aggregate, ConstantInt* index, std::string name = "") : Instruction(Opcode::ExtractValue, aggregate->getType()->getContainedTypes().at(index->getValue()), name) { assert(aggregate->getType()->isStructType()); addOperand(aggregate); addOperand(index); }
     Value* getAggregate() const { return getOperand(0); }
     ConstantInt* getIndex() const;
+
+    CLONE(ExtractValueInstruction)
 };
 
 }

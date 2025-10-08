@@ -113,6 +113,12 @@ ArrayType* Context::makeArrayType(Type* base, uint32_t size) {
 }
 
 StructType* Context::makeStructType(std::vector<Type*> elements, const std::string& name) {
+    if(elements.size() == 0) {
+        auto type = std::unique_ptr<StructType>(new StructType(elements, name));
+        StructType* ret = type.get();
+        m_types.push_back(std::move(type));
+        return ret;
+    }
     size_t hash = hashTypes(elements);
     hash ^= std::hash<std::string>{}(name) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
     if(auto it = m_structCache.find(hash); it != m_structCache.end())
@@ -202,10 +208,12 @@ IR::ConstantArray* Context::getConstantArray(ArrayType* type, const std::vector<
     return ret;
 }
 
-IR::Constant* Context::getZeroInitalizer(Type* type) {
-    std::unique_ptr<IR::Constant> constant(new IR::Constant(type, IR::Constant::ValueKind::ConstantZero)); // TODO properly handle this
-    IR::Constant* ret = constant.get();
-    m_constants.push_back(std::move(constant));
+IR::UndefValue* Context::getUndefValue(Type* type) {
+    if(m_undefValueCache.contains(type)) return m_undefValueCache.at(type);
+    std::unique_ptr<IR::UndefValue> undef(new IR::UndefValue(type));
+    IR::UndefValue* ret = undef.get();
+    m_undefValueCache.insert({type, ret});
+    m_constants.push_back(std::move(undef));
     return ret;
 }
 

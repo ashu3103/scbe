@@ -52,7 +52,8 @@ public:
 
 private:
     bool buildDAG(IR::Function* function);
-    ISel::DAG::Chain* buildChain(IR::Instruction* instruction);
+    ISel::DAG::Chain* earlyBuildChain(IR::Instruction* instruction);
+    void patchChain(IR::Instruction* instruction, ISel::DAG::Chain* chain);
     ISel::DAG::Root* buildBlock(IR::Block* block);
     ISel::DAG::Node* buildNonChain(IR::Value* value);
     ISel::DAG::Node* buildInstruction(IR::Instruction* value);

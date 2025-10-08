@@ -45,7 +45,7 @@ bool TargetLowering::run(MIR::Function* function) {
         }
     }
 
-    return true;
+    return false;
 }
 
 }

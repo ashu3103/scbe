@@ -373,8 +373,6 @@ void HumanPrinter::print(std::ostream& os, const Value* value) {
         os << " ]";
         break;
     }
-    case Value::ValueKind::ConstantZero:
-        os << "zeroinitializer";
     case Value::ValueKind::Block:
         os << value->getName();
         break;
@@ -393,6 +391,10 @@ void HumanPrinter::print(std::ostream& os, const Value* value) {
     case Value::ValueKind::GlobalVariable:
         print(os, value->getType());
         os << " @" << value->getName();
+        break;
+    case Value::ValueKind::UndefValue:
+        print(os, value->getType());
+        os << " undef";
         break;
     }
 }

@@ -9,6 +9,8 @@ class AllocateInstruction;
 
 class Mem2Reg : public FunctionPass {
 public:
+    Mem2Reg(Ref<Context> context) : m_context(context) {}
+
     bool run(IR::Function* function) override;
 
     void rename(IR::DominatorTree* tree, IR::Block* current, UMap<IR::Value*, std::vector<IR::Value*>>& stack, const std::vector<IR::AllocateInstruction*>& promoted);
@@ -17,6 +19,9 @@ public:
 
     USet<IR::Block*> allocaDefiningBlocks(IR::AllocateInstruction* instruction);
     USet<IR::Block*> allocaUsingBlocks(IR::AllocateInstruction* instruction);
+
+private:
+    Ref<Context> m_context = nullptr;
 };
 
 }

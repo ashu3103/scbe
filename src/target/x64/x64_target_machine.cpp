@@ -1,5 +1,9 @@
+#include "IR/call_analysis.hpp"
+#include "IR/cfg_semplification.hpp"
 #include "IR/constant_folder.hpp"
 #include "IR/dce.hpp"
+#include "IR/function_inlining.hpp"
+#include "IR/loop_analysis.hpp"
 #include "IR/mem2reg.hpp"
 #include "codegen/coff_object_emitter.hpp"
 #include "codegen/elf_object_emitter.hpp"
@@ -80,58 +84,76 @@ class x64DataLayout : public DataLayout {
 };
 
 void x64TargetMachine::addPassesForCodeGeneration(Ref<PassManager> passManager, std::ofstream& output, FileType type, OptimizationLevel level) {
-    passManager->addPass(std::make_shared<x64Legalizer>(m_context));
+    passManager->addRun({std::make_shared<x64Legalizer>(m_context)}, false);
     if(level >= OptimizationLevel::O1) {
-        passManager->addPass(std::make_shared<IR::Mem2Reg>());
-        passManager->addPass(std::make_shared<IR::ConstantFolder>(m_context));
-        passManager->addPass(std::make_shared<IR::DeadCodeElimination>());
+        passManager->addRun({
+            std::make_shared<IR::LoopAnalysis>(),
+            std::make_shared<IR::CallAnalysis>(),
+            std::make_shared<IR::FunctionInlining>(),
+            std::make_shared<IR::Mem2Reg>(m_context),
+            std::make_shared<IR::ConstantFolder>(m_context),
+            std::make_shared<IR::DeadCodeElimination>(),
+            std::make_shared<IR::CFGSemplification>()
+        }, true);
     }
-    passManager->addPass(std::make_shared<Codegen::DagISelPass>(getInstructionInfo(), getRegisterInfo(), getDataLayout(), m_context));
-    passManager->addPass(std::make_shared<x64TargetLowering>(getRegisterInfo(), getInstructionInfo(), getDataLayout(), m_spec.getOS()));
-    passManager->addPass(std::make_shared<Codegen::GraphColorRegalloc>(getDataLayout(), getInstructionInfo(), getRegisterInfo()));
-    passManager->addPass(std::make_shared<x64SaveCallRegisters>(getRegisterInfo(), getInstructionInfo()));
+    passManager->addRun({
+        std::make_shared<Codegen::DagISelPass>(getInstructionInfo(), getRegisterInfo(), getDataLayout(), m_context),
+        std::make_shared<x64TargetLowering>(getRegisterInfo(), getInstructionInfo(), getDataLayout(), m_spec.getOS()),
+        std::make_shared<Codegen::GraphColorRegalloc>(getDataLayout(), getInstructionInfo(), getRegisterInfo()),
+        std::make_shared<x64SaveCallRegisters>(getRegisterInfo(), getInstructionInfo())
+    }, false);
+
     if(type == FileType::AssemblyFile) {
-        passManager->addPass(std::make_shared<x64AsmPrinter>(output, getInstructionInfo(), getRegisterInfo(), getDataLayout()));
+        passManager->addRun({std::make_shared<x64AsmPrinter>(output, getInstructionInfo(), getRegisterInfo(), getDataLayout())}, false);
     }
     else {
         if(m_spec.getOS() == OS::Linux) {
-            passManager->addPass(std::make_shared<Codegen::ELFObjectEmitter>(
+            passManager->addRun({std::make_shared<Codegen::ELFObjectEmitter>(
                 output, std::make_shared<x64InstructionEncoder>(getInstructionInfo()), getInstructionInfo()
-            ));
+            )}, false);
         }
         else {
-            passManager->addPass(std::make_shared<Codegen::COFFObjectEmitter>(
+            passManager->addRun({std::make_shared<Codegen::COFFObjectEmitter>(
                 output, std::make_shared<x64InstructionEncoder>(getInstructionInfo()), getInstructionInfo()
-            ));
+            )}, false);
         }
     }
 }
 
 void x64TargetMachine::addPassesForCodeGeneration(Ref<PassManager> passManager, std::initializer_list<std::reference_wrapper<std::ofstream>> files, std::initializer_list<FileType> type, OptimizationLevel level) {
-    passManager->addPass(std::make_shared<x64Legalizer>(m_context));
+    passManager->addRun({std::make_shared<x64Legalizer>(m_context)}, false);
     if(level >= OptimizationLevel::O1) {
-        passManager->addPass(std::make_shared<IR::Mem2Reg>());
-        passManager->addPass(std::make_shared<IR::ConstantFolder>(m_context));
-        passManager->addPass(std::make_shared<IR::DeadCodeElimination>());
+        passManager->addRun({
+            std::make_shared<IR::LoopAnalysis>(),
+            std::make_shared<IR::CallAnalysis>(),
+            std::make_shared<IR::FunctionInlining>(),
+            std::make_shared<IR::Mem2Reg>(m_context),
+            std::make_shared<IR::ConstantFolder>(m_context),
+            std::make_shared<IR::DeadCodeElimination>(),
+            std::make_shared<IR::CFGSemplification>()
+        }, true);
     }
-    passManager->addPass(std::make_shared<Codegen::DagISelPass>(getInstructionInfo(), getRegisterInfo(), getDataLayout(), m_context));
-    passManager->addPass(std::make_shared<x64TargetLowering>(getRegisterInfo(), getInstructionInfo(), getDataLayout(), m_spec.getOS()));
-    passManager->addPass(std::make_shared<Codegen::GraphColorRegalloc>(getDataLayout(), getInstructionInfo(), getRegisterInfo()));
-    passManager->addPass(std::make_shared<x64SaveCallRegisters>(getRegisterInfo(), getInstructionInfo()));
+    passManager->addRun({
+        std::make_shared<Codegen::DagISelPass>(getInstructionInfo(), getRegisterInfo(), getDataLayout(), m_context),
+        std::make_shared<x64TargetLowering>(getRegisterInfo(), getInstructionInfo(), getDataLayout(), m_spec.getOS()),
+        std::make_shared<Codegen::GraphColorRegalloc>(getDataLayout(), getInstructionInfo(), getRegisterInfo()),
+        std::make_shared<x64SaveCallRegisters>(getRegisterInfo(), getInstructionInfo())
+    }, false);
+
     for(size_t i = 0; i < files.size(); i++) {
         if(type.begin()[i] == FileType::AssemblyFile) {
-            passManager->addPass(std::make_shared<x64AsmPrinter>(files.begin()[i].get(), getInstructionInfo(), getRegisterInfo(), getDataLayout()));
+            passManager->addRun({std::make_shared<x64AsmPrinter>(files.begin()[i].get(), getInstructionInfo(), getRegisterInfo(), getDataLayout())}, false);
         }
         else {
             if(m_spec.getOS() == OS::Linux) {
-                passManager->addPass(std::make_shared<Codegen::ELFObjectEmitter>(
+                passManager->addRun({std::make_shared<Codegen::ELFObjectEmitter>(
                     files.begin()[i].get(), std::make_shared<x64InstructionEncoder>(getInstructionInfo()), getInstructionInfo()
-                ));
+                )}, false);
             }
             else {
-                passManager->addPass(std::make_shared<Codegen::COFFObjectEmitter>(
+                passManager->addRun({std::make_shared<Codegen::COFFObjectEmitter>(
                     files.begin()[i].get(), std::make_shared<x64InstructionEncoder>(getInstructionInfo()), getInstructionInfo()
-                ));
+                )}, false);
             }
         }
     }

@@ -19,18 +19,16 @@ void Block::addInstruction(std::unique_ptr<Instruction> instruction) {
         instruction->setName(std::to_string(m_parentFunction->m_valueNameCounter++));
     instruction->m_parentBlock = this;
 
-    if(instruction->getOpcode() == Instruction::Opcode::Allocate)
-        m_parentFunction->m_allocations.push_back(cast<AllocateInstruction>(instruction.get()));
     m_instructions.push_back(std::move(instruction));
+    m_instructions.back()->onAdd();
 }
 
 void Block::addInstructionAtFront(std::unique_ptr<Instruction> instruction) {
     if(instruction->getName().empty() && !nameBlacklist(instruction->getOpcode()))
         instruction->setName(std::to_string(m_parentFunction->m_valueNameCounter++));
     instruction->m_parentBlock = this;
-    if(instruction->getOpcode() == Instruction::Opcode::Allocate)
-        m_parentFunction->m_allocations.push_back(cast<AllocateInstruction>(instruction.get()));
     m_instructions.insert(m_instructions.begin(), std::move(instruction));
+    m_instructions.front()->onAdd();
 }
 
 void Block::addInstructionAfter(std::unique_ptr<Instruction> instruction, Instruction* after) {
@@ -40,9 +38,8 @@ void Block::addInstructionAfter(std::unique_ptr<Instruction> instruction, Instru
 
     auto it = getInstructionIdx(after);
 
-    if(instruction->getOpcode() == Instruction::Opcode::Allocate)
-        m_parentFunction->m_allocations.push_back(cast<AllocateInstruction>(instruction.get()));
-    m_instructions.insert(it + 1, std::move(instruction));
+    m_instructions.insert(m_instructions.begin() + it + 1, std::move(instruction));
+    m_instructions[it + 1]->onAdd();
 }
 
 void Block::addInstructionBefore(std::unique_ptr<Instruction> instruction, Instruction* before) {
@@ -52,39 +49,19 @@ void Block::addInstructionBefore(std::unique_ptr<Instruction> instruction, Instr
 
     auto it = getInstructionIdx(before);
 
-    if(instruction->getOpcode() == Instruction::Opcode::Allocate)
-        m_parentFunction->m_allocations.push_back(cast<AllocateInstruction>(instruction.get()));
-    m_instructions.insert(it, std::move(instruction));
+    m_instructions.insert(m_instructions.begin() + it, std::move(instruction));
+    m_instructions[it]->onAdd();
 }
 
-void Block::removeInstruction(Instruction* instruction) {
+std::unique_ptr<Instruction> Block::removeInstruction(Instruction* instruction) {
+    if(!hasInstruction(instruction)) return nullptr;
     auto idx = getInstructionIdx(instruction);
-    if(idx == m_instructions.end()) return;
-
-    if(auto jump = dyn_cast<IR::JumpInstruction>(instruction)) {
-        Block* toBlock = cast<Block>(jump->getOperand(0));
-        toBlock->removePredecessor(this);
-        removeSuccessor(toBlock);
-
-        if(jump->getNumOperands() > 1) {
-            Block* elseBlock = cast<Block>(jump->getOperand(1));
-            elseBlock->removePredecessor(this);
-            removeSuccessor(elseBlock);
-        } 
-
-        m_parentFunction->m_dominatorTreeDirty = true;
-    }
-    else if(auto alloc = dyn_cast<IR::AllocateInstruction>(instruction)) {
-        m_parentFunction->m_allocations.erase(std::find(m_parentFunction->m_allocations.begin(), m_parentFunction->m_allocations.end(), alloc));
-    }
     
-    for(auto& op : instruction->getOperands())
-        op->removeFromUses(instruction);
-
-    for(auto& instr : instruction->getUses())
-        instr->removeOperand(instruction);
+    instruction->beforeRemove(this);
     
-    m_instructions.erase(idx);
+    auto instr = std::move(m_instructions[idx]);
+    m_instructions.erase(m_instructions.begin() + idx);
+    return instr;
 }
 
 Block* Block::getImmediateDominator() {
@@ -107,6 +84,11 @@ Block* Block::getImmediateDominator() {
     return idom;
 }
 
+size_t Block::getInstructionIdx(Instruction* instruction) {
+    auto it = std::find_if(m_instructions.begin(), m_instructions.end(), [instruction](auto const& ptr) { return ptr.get() == instruction; });
+    assert(it != m_instructions.end());
+    return it - m_instructions.begin();
+}
 
 void Block::setPhiForValue(Value* value, PhiInstruction* phi) {
     m_phiForValues[value] = phi;
@@ -116,15 +98,23 @@ std::unique_ptr<Block> Block::split(Instruction* at) {
     if(m_instructions.size() < 2) return nullptr;
     std::unique_ptr<Block> block = std::unique_ptr<Block>(new Block(at->getParentBlock()->m_context));
     auto point = getInstructionIdx(at);
-    // block->m_instructions.insert(block->m_instructions.begin(), point+1, m_instructions.end());
-    block->m_instructions.insert(
-        block->m_instructions.begin(),
-        std::make_move_iterator(point + 1),
-        std::make_move_iterator(m_instructions.end())
-    );
-    m_instructions.erase(point+1, m_instructions.end());
-    for(auto& instruction : block->m_instructions) {
-        instruction->m_parentBlock = block.get();
+
+    std::vector<std::pair<Value*, Value*>> replacements;
+    for(size_t i = point + 1; i < m_instructions.size(); i++) {
+        auto& instruction = m_instructions[i];
+        auto clone = instruction->clone();
+        replacements.push_back({instruction.get(), clone.get()});
+        block->m_parentFunction = m_parentFunction;
+        block->addInstruction(std::move(clone));
+        block->m_parentFunction = nullptr;
+    }
+    for(auto& replacement : replacements) {
+        block->replace(replacement.first, replacement.second);
+        getParentFunction()->replace(replacement.first, replacement.second);
+    }
+    
+    while(point + 1< m_instructions.size()) {
+        removeInstruction(m_instructions.back().get());
     }
     return std::move(block);
 }
@@ -157,5 +147,27 @@ void Block::removePredecessor(Block* block) {
     if(count == 0) m_predecessors.erase(block);
 }
 
+bool Block::isTerminator() const {
+    if(m_instructions.empty())
+        return false;
+    return m_instructions.back()->isTerminator();
+}
+
+void Block::replace(Value* replace, Value* with) {
+    for(auto& instr : getInstructions()) {
+        for(auto& op : instr->m_operands) {
+            if(op != replace) continue;
+            replace->removeFromUses(instr.get());
+            op = with;
+            with->addUse(instr.get());
+        }
+    }
+}
+
+void Block::clearInstructions() {
+    for(auto& instr : getInstructions())
+        instr->beforeRemove(this);
+    m_instructions.clear();
+}
 
 }

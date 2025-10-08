@@ -22,7 +22,7 @@ bool ObjectEmitter::run(MIR::Function* function) {
             }
         }
     }
-    return true;
+    return false;
 }
 
 void ObjectEmitter::end(Unit& unit) {
@@ -99,12 +99,6 @@ void ObjectEmitter::encodeConstant(IR::Constant* constant, DataLayout* layout) {
             m_fixups.push_back(Fixup(block->getName(), m_dataBytes.size(), 0, Fixup::Section::Data));
 
             m_dataBytes.insert(m_dataBytes.end(), (uint8_t*)&loc, (uint8_t*)&loc + sizeof(size_t));
-            break;
-        }
-        case IR::Value::ValueKind::ConstantZero: {
-            size_t size = layout->getSize(constant->getType());
-            for(size_t i = 0; i < size; i++)
-                m_dataBytes.push_back(0);
             break;
         }
         default:

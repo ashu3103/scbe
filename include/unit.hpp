@@ -52,6 +52,8 @@ public:
     IR::GlobalVariable* createGlobalString(const std::string& value, const std::string& name = "");
     IR::GlobalVariable* createGlobalVariable(Type* type, IR::Constant* value, const std::string& name = "");
 
+    size_t getIRInstructionSize() const;
+
 private:
     std::string m_name;
     std::vector<std::unique_ptr<IR::Function>> m_functions;

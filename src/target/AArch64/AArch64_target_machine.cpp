@@ -1,3 +1,7 @@
+#include "IR/call_analysis.hpp"
+#include "IR/cfg_semplification.hpp"
+#include "IR/function_inlining.hpp"
+#include "IR/loop_analysis.hpp"
 #include "data_layout.hpp"
 #include "IR/constant_folder.hpp"
 #include "IR/dce.hpp"
@@ -72,15 +76,23 @@ class AArch64DataLayout : public DataLayout {
 void AArch64TargetMachine::addPassesForCodeGeneration(Ref<PassManager> passManager, std::ofstream& output, FileType type, OptimizationLevel level) {
     if(type == FileType::ObjectFile) throw std::runtime_error("TODO");
     if(level >= OptimizationLevel::O1) {
-        passManager->addPass(std::make_shared<IR::Mem2Reg>());
-        passManager->addPass(std::make_shared<IR::ConstantFolder>(m_context));
-        passManager->addPass(std::make_shared<IR::DeadCodeElimination>());
+        passManager->addRun({
+            std::make_shared<IR::LoopAnalysis>(),
+            std::make_shared<IR::CallAnalysis>(),
+            std::make_shared<IR::FunctionInlining>(),
+            std::make_shared<IR::Mem2Reg>(m_context),
+            std::make_shared<IR::ConstantFolder>(m_context),
+            std::make_shared<IR::DeadCodeElimination>(),
+            std::make_shared<IR::CFGSemplification>()
+        }, true);
     }
-    passManager->addPass(std::make_shared<Codegen::DagISelPass>(getInstructionInfo(), getRegisterInfo(), getDataLayout(), m_context));
-    passManager->addPass(std::make_shared<AArch64TargetLowering>(getRegisterInfo(), getInstructionInfo(), getDataLayout(), m_spec.getOS()));
-    passManager->addPass(std::make_shared<Codegen::GraphColorRegalloc>(getDataLayout(), getInstructionInfo(), getRegisterInfo()));
-    passManager->addPass(std::make_shared<AArch64SaveCallRegisters>(getRegisterInfo(), getInstructionInfo()));
-    passManager->addPass(std::make_shared<AArch64AsmPrinter>(output, getInstructionInfo(), getRegisterInfo(), getDataLayout()));
+    passManager->addRun({
+        std::make_shared<Codegen::DagISelPass>(getInstructionInfo(), getRegisterInfo(), getDataLayout(), m_context),
+        std::make_shared<AArch64TargetLowering>(getRegisterInfo(), getInstructionInfo(), getDataLayout(), m_spec.getOS()),
+        std::make_shared<Codegen::GraphColorRegalloc>(getDataLayout(), getInstructionInfo(), getRegisterInfo()),
+        std::make_shared<AArch64SaveCallRegisters>(getRegisterInfo(), getInstructionInfo()),
+        std::make_shared<AArch64AsmPrinter>(output, getInstructionInfo(), getRegisterInfo(), getDataLayout())
+    }, false);
 }
 
 void AArch64TargetMachine::addPassesForCodeGeneration(Ref<PassManager> passManager, std::initializer_list<std::reference_wrapper<std::ofstream>> files, std::initializer_list<FileType> type, OptimizationLevel level) {

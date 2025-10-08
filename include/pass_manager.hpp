@@ -6,14 +6,19 @@
 
 namespace scbe {
 
+struct PassGroup {
+    std::vector<Ref<Pass>> m_passes;
+    bool m_repeat = false;
+};
+
 class PassManager {
 public:
-    void addPass(Ref<Pass> pass) { m_passes.push_back(std::move(pass)); }
+    void addRun(std::vector<Ref<Pass>> passes, bool repeat) { m_groups.push_back({std::move(passes), repeat}); }
 
     void run(Unit& unit);
 
 protected:
-    std::vector<Ref<Pass>> m_passes;
+    std::vector<PassGroup> m_groups;
 };
 
 }

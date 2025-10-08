@@ -11,6 +11,7 @@
 
 #include <algorithm>
 #include <deque>
+#include <utility>
 
 namespace scbe::Codegen {
 
@@ -74,7 +75,7 @@ bool DagISelPass::run(IR::Function* function) {
             next = next->getNext();
         }
     }
-    return true;
+    return false;
 }
 
 bool DagISelPass::buildDAG(IR::Function* function) {
@@ -93,39 +94,39 @@ bool DagISelPass::buildDAG(IR::Function* function) {
 }
 
 ISel::DAG::Root* DagISelPass::buildBlock(IR::Block* block) {
+    auto prevRoot = m_builder.getRoot();
+    std::vector<std::pair<IR::Instruction*, ISel::DAG::Chain*>> chains;
     ISel::DAG::Root* root = cast<ISel::DAG::Root>(m_valuesToNodes[block]);
     m_builder.setRoot(root);
     ISel::DAG::Chain* current = root;
     for(auto& instruction : block->getInstructions()) {
         if(isChain(instruction.get())) {
-            auto chain = buildChain(instruction.get());
+            auto chain = earlyBuildChain(instruction.get());
+            chains.push_back({instruction.get(), chain});
             current->setNext(chain);
             current = chain;
         }
     }
+
+    for(auto& pair : chains) {
+        patchChain(pair.first, pair.second);
+    }
+    m_builder.setRoot(prevRoot);
     return root;
 }
 
-ISel::DAG::Chain* DagISelPass::buildChain(IR::Instruction* instruction) {
+ISel::DAG::Chain* DagISelPass::earlyBuildChain(IR::Instruction* instruction) {
+    std::unique_ptr<ISel::DAG::Chain> ret = nullptr;
     switch(instruction->getOpcode()) {
         case IR::Instruction::Opcode::Ret: {
-            if(instruction->getNumOperands() > 0) {
-                auto value = buildNonChain(instruction->getOperand(0));
-                return m_builder.createReturn(value);
-            }
-            return m_builder.createReturn();
+            ret = std::make_unique<ISel::DAG::Chain>(ISel::DAG::Node::NodeKind::Ret);
+            break;
         }
         case IR::Instruction::Opcode::Jump: {
-            auto block1 = cast<ISel::DAG::Root>(buildNonChain(instruction->getOperand(0)));
-            if(instruction->getNumOperands() > 1) {
-                auto block2 = cast<ISel::DAG::Root>(buildNonChain(instruction->getOperand(1)));
-                auto cond = buildNonChain(instruction->getOperand(2));
-                return m_builder.createCondJump(block1, block2, cond);
-            }
-            return m_builder.createJump(block1);
+            ret = std::make_unique<ISel::DAG::Chain>(ISel::DAG::Node::NodeKind::Jump);
+            break;
         }
         case IR::Instruction::Opcode::Load: {
-            auto value = cast<ISel::DAG::FrameIndex>(buildNonChain(instruction->getOperand(0)));
             ISel::DAG::Value* retValue = nullptr;
             if(instruction->getType()->isStructType()) {
                 auto multi = std::make_unique<ISel::DAG::MultiValue>(instruction->getType());
@@ -148,13 +149,13 @@ ISel::DAG::Chain* DagISelPass::buildChain(IR::Instruction* instruction) {
             else {
                 retValue = makeOrGetRegister(instruction, instruction->getType());
             }
+            ret = std::make_unique<ISel::DAG::Chain>(ISel::DAG::Node::NodeKind::Load, retValue);
             m_valuesToNodes[instruction] = retValue;
-            return m_builder.createLoad(value, retValue);
+            break;
         }
         case IR::Instruction::Opcode::Store: {
-            auto ptr = cast<ISel::DAG::FrameIndex>(buildNonChain(instruction->getOperand(0)));
-            auto value = buildNonChain(instruction->getOperand(1));
-            return m_builder.createStore(ptr, value);
+            ret = std::make_unique<ISel::DAG::Chain>(ISel::DAG::Node::NodeKind::Store);
+            break;
         }
         case IR::Instruction::Opcode::Call: {
             auto call = cast<IR::CallInstruction>(instruction);
@@ -180,25 +181,98 @@ ISel::DAG::Chain* DagISelPass::buildChain(IR::Instruction* instruction) {
             else {
                 result = makeOrGetRegister(instruction, instruction->getType());
             }
-            std::vector<ISel::DAG::Node*> args;
-            for(auto& operand : call->getArguments()) {
-                auto value = buildNonChain(operand);
-                args.push_back(value);
-            }
-            auto callee = buildNonChain(call->getCallee());
+            ret = std::make_unique<ISel::DAG::Call>(result);
             m_valuesToNodes[instruction] = result;
-            return m_builder.createCall(result, callee, args, call->getUses().size() > 0);
+            break;
         }
         case IR::Instruction::Opcode::Switch: {
+            ret = std::make_unique<ISel::DAG::Chain>(ISel::DAG::Node::NodeKind::Switch);
+            break;
+        }
+        case IR::Instruction::Opcode::Phi: {
+            auto node = makeOrGetRegister(instruction, instruction->getType());
+            ret = std::make_unique<ISel::DAG::Chain>(ISel::DAG::Node::NodeKind::Phi, node);
+            m_valuesToNodes[instruction] = node;
+            break;
+        }
+        default:
+            throw std::runtime_error("Unsupported opcode " + std::to_string((uint32_t)instruction->getOpcode()));
+    }
+    auto ptr = ret.get();
+    m_builder.insert(std::move(ret));
+    return ptr;
+}
+
+void DagISelPass::patchChain(IR::Instruction* instruction, ISel::DAG::Chain* chain) {
+    switch(chain->getKind()) {
+        case ISel::DAG::Node::NodeKind::Ret: {
+            if(instruction->getNumOperands() > 0) {
+                auto value = buildNonChain(instruction->getOperand(0));
+                chain->addOperand(value);
+            }
+            return;
+        }
+        case ISel::DAG::Node::NodeKind::Jump: {
+            auto block1 = cast<ISel::DAG::Root>(buildNonChain(instruction->getOperand(0)));
+            chain->addOperand(block1);
+            if(instruction->getNumOperands() > 1) {
+                auto block2 = cast<ISel::DAG::Root>(buildNonChain(instruction->getOperand(1)));
+                auto cond = buildNonChain(instruction->getOperand(2));
+                chain->addOperand(block2);
+                chain->addOperand(cond);
+            }
+            return;
+        }
+        case ISel::DAG::Node::NodeKind::Load: {
+            auto value = cast<ISel::DAG::FrameIndex>(buildNonChain(instruction->getOperand(0)));
+            chain->addOperand(value);
+            return;
+        }
+        case ISel::DAG::Node::NodeKind::Store: {
+            auto ptr = cast<ISel::DAG::FrameIndex>(buildNonChain(instruction->getOperand(0)));
+            auto value = buildNonChain(instruction->getOperand(1));
+            chain->addOperand(ptr);
+            chain->addOperand(value);
+            return;
+        }
+        case ISel::DAG::Node::NodeKind::Call: {
+            auto call = cast<IR::CallInstruction>(instruction);
+            auto callee = buildNonChain(call->getCallee());
+            chain->addOperand(callee);
+            for(auto& operand : call->getArguments()) {
+                auto value = buildNonChain(operand);
+                chain->addOperand(value);
+            }
+            cast<ISel::DAG::Call>(chain)->setResultUsed(call->getUses().size() > 0);
+            return;
+        }
+        case ISel::DAG::Node::NodeKind::Switch: {
             IR::SwitchInstruction* switchInstruction = cast<IR::SwitchInstruction>(instruction);
             ISel::DAG::Node* condition = buildNonChain(switchInstruction->getCondition());
             ISel::DAG::Root* defaultCase = cast<ISel::DAG::Root>(buildNonChain(switchInstruction->getDefaultCase()));
-            std::vector<std::pair<ISel::DAG::Node*, ISel::DAG::Root*>> cases;
+            chain->addOperand(condition);
+            chain->addOperand(defaultCase);
             for(auto casePair : switchInstruction->getCases()) {
                 ISel::DAG::Root* block = cast<ISel::DAG::Root>(buildNonChain(casePair.second));
-                cases.push_back(std::make_pair(buildNonChain(casePair.first), block));
+                chain->addOperand(buildNonChain(casePair.first));
+                chain->addOperand(block);
             }
-            return m_builder.createSwitch(condition, defaultCase, cases);
+            return;
+        }
+        case ISel::DAG::Node::NodeKind::Phi: {
+            std::vector<ISel::DAG::Node*> values;
+
+            auto phi = cast<IR::PhiInstruction>(instruction);
+            for(size_t i = 0; i < phi->getNumOperands(); i++) {
+                auto operand = phi->getOperand(i);
+                auto value = buildNonChain(operand);
+                values.push_back(value);
+            }
+
+            for(auto value : values)
+                chain->addOperand(value);
+
+            return;
         }
         default:
             break;
@@ -277,6 +351,12 @@ ISel::DAG::Node* DagISelPass::buildNonChain(IR::Value* value) {
         }
         case IR::Value::ValueKind::Block:
             return buildBlock(cast<IR::Block>(value));
+        case IR::Value::ValueKind::UndefValue: {
+            IR::UndefValue* undef = (IR::UndefValue*)value;
+            auto node = makeOrGetConstInt(0, undef->getType());
+            m_valuesToNodes[value] = node;
+            return node;
+        }
         default:
             break;
     }
@@ -288,6 +368,7 @@ ISel::DAG::Node* DagISelPass::buildNonChain(IR::Value* value) {
     auto lhs = buildNonChain(value->getOperand(0)); \
     auto rhs = buildNonChain(value->getOperand(1)); \
     auto node = m_builder.create##instr(lhs, rhs, makeOrGetRegister(value, value->getType())); \
+    cast<ISel::DAG::Instruction>(node)->setChainIndex(chainIndex); \
     m_valuesToNodes[value] = node; \
     return node;
 
@@ -296,6 +377,7 @@ ISel::DAG::Node* DagISelPass::buildNonChain(IR::Value* value) {
     ISel::DAG::Node* operand = buildNonChain(irCast->getOperand(0)); \
     ISel::DAG::Register* result = makeOrGetRegister(value, value->getType()); \
     auto node = m_builder.create##instr(result, operand, irCast->getType()); \
+    cast<ISel::DAG::Instruction>(node)->setChainIndex(chainIndex); \
     m_valuesToNodes[value] = node; \
     return node;
 
@@ -303,6 +385,13 @@ ISel::DAG::Node* DagISelPass::buildNonChain(IR::Value* value) {
 ISel::DAG::Node* DagISelPass::buildInstruction(IR::Instruction* value) {
     if(m_valuesToNodes.contains(value))
         return m_valuesToNodes[value];
+
+    IR::Block* block = value->getParentBlock();
+    size_t chainIndex = 0;
+    for(auto& ins : block->getInstructions()) {
+        if(ins.get() == value) break;
+        if(isChain(ins.get())) chainIndex++;
+    }
 
     switch (value->getOpcode()) {
         case IR::Instruction::Opcode::Allocate: {
@@ -313,6 +402,7 @@ ISel::DAG::Node* DagISelPass::buildInstruction(IR::Instruction* value) {
             return node;
         }
         case IR::Instruction::Opcode::Call:
+        case IR::Instruction::Opcode::Phi:
         case IR::Instruction::Opcode::Load: {
             auto node = makeOrGetRegister(value, value->getType());
             m_valuesToNodes[value] = node;
@@ -411,28 +501,6 @@ ISel::DAG::Node* DagISelPass::buildInstruction(IR::Instruction* value) {
         case IR::Instruction::Opcode::Or: {
             GET_BINOP(Or);
         }
-        case IR::Instruction::Opcode::Phi: {
-            auto phi = cast<IR::PhiInstruction>(value);
-            auto node = makeOrGetRegister(value, value->getType());
-            std::vector<ISel::DAG::Node*> values;
-
-            auto phiNode = std::make_unique<ISel::DAG::Instruction>(ISel::DAG::Node::NodeKind::Phi, node);
-            auto ptr = phiNode.get();
-            m_valuesToNodes[value] = ptr;
-
-            for(size_t i = 0; i < phi->getNumOperands(); i++) {
-                auto operand = phi->getOperand(i);
-                auto value = buildNonChain(operand);
-                values.push_back(value);
-            }
-
-            for(auto value : values)
-                phiNode->addOperand(value);
-
-            m_builder.insert(std::move(phiNode));
-
-            return ptr;
-        }
         case IR::Instruction::Opcode::GetElementPtr: {
             auto gep = cast<IR::GEPInstruction>(value);
             ISel::DAG::Register* node = makeOrGetRegister(value, value->getType());
@@ -444,6 +512,7 @@ ISel::DAG::Node* DagISelPass::buildInstruction(IR::Instruction* value) {
                 indices.push_back(value);
             }
             auto gepNode = m_builder.createGEP(node, ptr, indices);
+            cast<ISel::DAG::Instruction>(gepNode)->setChainIndex(chainIndex);
             m_valuesToNodes[value] = gepNode;
             return gepNode;
         }
@@ -551,6 +620,17 @@ void DagISelPass::selectPattern(ISel::DAG::Node* node) {
 MIR::Operand* DagISelPass::emitOrGet(ISel::DAG::Node* node, MIR::Block* block) {
     if(m_nodesToMIROperands.contains(node)) return m_nodesToMIROperands[node];
 
+    if(auto ins = dyn_cast<ISel::DAG::Instruction>(node)) {
+        ISel::DAG::Root* root = cast<ISel::DAG::Root>(m_valuesToNodes.at(block->getIRBlock()));
+        ISel::DAG::Chain* chain = root;
+        for(size_t i = 0; i < ins->getChainIndex(); i++) chain = chain->getNext();
+
+        if(chain != root) {
+            selectPattern(chain);
+            emitOrGet(chain, block);
+        }
+    }
+
     if(!m_bestMatch.contains(node))
         throw std::runtime_error("No patterns matched for " + std::to_string((uint32_t)node->getKind()));
 
@@ -572,6 +652,7 @@ bool DagISelPass::isChain(IR::Instruction* instruction) {
         || instruction->getOpcode() == IR::Instruction::Opcode::Load
         || instruction->getOpcode() == IR::Instruction::Opcode::Store
         || instruction->getOpcode() == IR::Instruction::Opcode::Switch
+        || instruction->getOpcode() == IR::Instruction::Opcode::Phi
         || instruction->getOpcode() == IR::Instruction::Opcode::Call;
 }
 

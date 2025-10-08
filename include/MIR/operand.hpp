@@ -48,7 +48,7 @@ public:
     bool isExternalSymbol() const { return m_kind == Kind::ExternalSymbol; }
     bool isMultiValue() const { return m_kind == Kind::MultiValue; }
 
-    virtual bool equals(MIR::Operand* other, bool ignoreFlags) const { return ignoreFlags || m_flags == other->m_flags; }
+    virtual bool equals(MIR::Operand* other, bool ignoreFlags) const { return other->m_kind == m_kind && (ignoreFlags || m_flags == other->m_flags); }
 
 protected:
     Kind m_kind;
@@ -60,7 +60,7 @@ class Register: public Operand {
 public:
     uint32_t getId() const { return m_id; }    
 
-    bool equals(MIR::Operand* other, bool ignoreFlags) const override { return other->isRegister() && cast<Register>(other)->getId() == m_id && Operand::equals(other, ignoreFlags); }
+    bool equals(MIR::Operand* other, bool ignoreFlags) const override { return Operand::equals(other, ignoreFlags) && cast<Register>(other)->getId() == m_id; }
 
 protected:
     Register(uint32_t id) : Operand(Kind::Register), m_id(id) {}
@@ -84,7 +84,7 @@ public:
     int64_t getValue() const { return m_value; }
     Size getSize() const { return m_size; }
 
-    bool equals(MIR::Operand* other, bool ignoreFlags) const override { return other->isImmediateInt() && cast<ImmediateInt>(other)->getValue() == m_value && cast<ImmediateInt>(other)->getSize() == m_size && Operand::equals(other, ignoreFlags); }
+    bool equals(MIR::Operand* other, bool ignoreFlags) const override { return Operand::equals(other, ignoreFlags) && cast<ImmediateInt>(other)->getValue() == m_value && cast<ImmediateInt>(other)->getSize() == m_size; }
 
 private:
     int64_t m_value;
@@ -97,7 +97,7 @@ public:
 
     uint32_t getIndex() const { return m_index; }
 
-    bool equals(MIR::Operand* other, bool ignoreFlags) const override { return other->isFrameIndex() && cast<FrameIndex>(other)->getIndex() == m_index && Operand::equals(other, ignoreFlags); }
+    bool equals(MIR::Operand* other, bool ignoreFlags) const override { return Operand::equals(other, ignoreFlags) && cast<FrameIndex>(other)->getIndex() == m_index; }
 
 private:
     uint32_t m_index;
@@ -109,7 +109,7 @@ public:
 
     const std::string& getName() const { return m_name; }
 
-    bool equals(MIR::Operand* other, bool ignoreFlags) const override { return other->isRegister() && cast<Symbol>(other)->getName() == m_name && Operand::equals(other, ignoreFlags); }
+    bool equals(MIR::Operand* other, bool ignoreFlags) const override { return Operand::equals(other, ignoreFlags) && cast<Symbol>(other)->getName() == m_name; }
 
 protected:
     std::string m_name;
@@ -121,7 +121,7 @@ public:
 
     size_t getIndex() const { return m_index; }
 
-    bool equals(MIR::Operand* other, bool ignoreFlags) const override { return other->isConstantIndex() && cast<ConstantIndex>(other)->getIndex() == m_index && Operand::equals(other, ignoreFlags); }
+    bool equals(MIR::Operand* other, bool ignoreFlags) const override { return Operand::equals(other, ignoreFlags) && cast<ConstantIndex>(other)->getIndex() == m_index; }
 
 private:
     size_t m_index;

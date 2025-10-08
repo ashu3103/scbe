@@ -1,6 +1,5 @@
 #pragma once
 
-#include "IR/function.hpp"
 #include "node.hpp"
 #include "type.hpp"
 #include "value.hpp"
@@ -19,9 +18,13 @@ public:
 
     void addOperand(Node* operand) { m_operands.push_back(operand); }
 
+    size_t getChainIndex() const { return m_chainIndex; }
+    void setChainIndex(size_t index) { m_chainIndex = index; }
+
 protected:
     std::vector<Node*> m_operands;
     Value* m_result = nullptr;
+    size_t m_chainIndex = 0;
 };
 
 class Chain : public Instruction {
@@ -51,9 +54,11 @@ private:
 
 class Call : public Chain {
 public:
-    Call(Value* result, Node* callee, bool isResultUsed) : Chain(NodeKind::Call, result), m_isResultUsed(isResultUsed) { addOperand(callee); }
+    // Call(Value* result, Node* callee, bool isResultUsed) : Chain(NodeKind::Call, result), m_isResultUsed(isResultUsed) { addOperand(callee); }
+    Call(Value* result) : Chain(NodeKind::Call, result) {}
 
     bool isResultUsed() const { return m_isResultUsed; }
+    void setResultUsed(bool isResultUsed) { m_isResultUsed = isResultUsed; }
 
 private:
     bool m_isResultUsed = true;

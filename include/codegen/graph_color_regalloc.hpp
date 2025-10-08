@@ -13,14 +13,14 @@ public:
     struct Block {
         std::unordered_map<uint32_t, std::vector<Ref<MIR::LiveRange>>> m_liveRanges;
         std::vector<Ref<MIR::LiveRange>> m_rangeVector;
-        MIR::Block* m_mirBlock;
+        MIR::Block* m_mirBlock = nullptr;
         std::vector<Ref<Block>> m_successors;
     };
 
     struct GraphNode {
         uint32_t m_id = 0;
         uint32_t m_physicalRegister = SPILL - 1;
-        std::vector<uint32_t> m_connections;
+        USet<uint32_t> m_connections;
     };
 
     GraphColorRegalloc(DataLayout* dataLayout, Target::InstructionInfo* instrInfo, Target::RegisterInfo* registerInfo) : RegallocBase(dataLayout, instrInfo, registerInfo) {}
@@ -37,8 +37,8 @@ public:
     void fillHoles(Ref<Block> from, Ref<Block> current, std::vector<Ref<Block>>& path, std::unordered_set<Ref<Block>>& visited);
     void propagate(Ref<Block> root, std::unordered_set<Ref<Block>>& visited);
 
-    std::vector<uint32_t> getOverlaps(uint32_t id, const std::unordered_map<uint32_t, std::vector<Ref<MIR::LiveRange>>>& ranges, MIR::Block* block);
-    uint32_t getVirtualConnectionCount(const std::vector<uint32_t>& connections, Target::RegisterInfo* registerInfo) const;
+    USet<uint32_t> getOverlaps(uint32_t id, const std::unordered_map<uint32_t, std::vector<Ref<MIR::LiveRange>>>& ranges, MIR::Block* block);
+    uint32_t getVirtualConnectionCount(const USet<uint32_t>& connections, Target::RegisterInfo* registerInfo) const;
 };
 
 }

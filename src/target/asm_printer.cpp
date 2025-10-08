@@ -8,7 +8,7 @@ namespace scbe::Target {
 bool AsmPrinter::run(MIR::Function* function) {
     m_current = function;
     print(function);
-    return true;
+    return false;
 }
 
 }

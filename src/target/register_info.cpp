@@ -13,10 +13,12 @@ std::optional<uint32_t> RegisterInfo::getRegisterWithSize(uint32_t reg, size_t d
     
     const auto& regs = regClass.getRegs();
 
+    // Find the index of this register in its class
     auto it = std::ranges::find(regs.begin(), regs.end(), reg);
     if (it == regs.end()) return std::nullopt;
     size_t indexInClass = std::distance(regs.begin(), it);
 
+    // Now look for another class with same layout but desired size
     for (const auto& targetClass : m_registerClasses) {
         if (!(targetClass.getSize() == desiredSize && targetClass.getRegs().size() > indexInClass))
             continue;

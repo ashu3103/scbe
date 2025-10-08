@@ -11,6 +11,7 @@ public:
 
     const std::vector<Block*>& getChildren(Block* block) const { return m_dominatorTree.at(block); }
     bool hasChildren(Block* block) const { return m_dominatorTree.contains(block); }
+    bool dominates(Block* dominator, Block* dominated) const;
 private:
     std::unordered_map<Block*, std::vector<Block*>> m_dominatorTree;
 };

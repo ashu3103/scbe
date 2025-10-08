@@ -23,11 +23,13 @@ public:
     void addInstructionAtFront(std::unique_ptr<Instruction> instruction);
     void addInstructionAfter(std::unique_ptr<Instruction> instruction, Instruction* after);
     void addInstructionBefore(std::unique_ptr<Instruction> instruction, Instruction* before);
+    void replace(Value* replace, Value* with);
 
     // Remove instruction from block.
     // Make sure to replace any uses of the instruction, since the instruction will be deleted and removed from any uses.
     // Otherwise you will end up with undefined behavior.
-    void removeInstruction(Instruction* instruction);
+    std::unique_ptr<Instruction> removeInstruction(Instruction* instruction);
+    void clearInstructions();
     void setPhiForValue(Value* value, PhiInstruction* phi);
     void addSuccessor(Block* block);
     void addPredecessor(Block* block);
@@ -47,17 +49,16 @@ public:
     Function* getParentFunction() const { return m_parentFunction; }
     MIR::Block* getMIRBlock() const { return m_mirBlock; }
 
-    auto getInstructionIdx(Instruction* instruction) {
-        return std::find_if(m_instructions.begin(), m_instructions.end(),
-            [instruction](auto const& ptr) { return ptr.get() == instruction; });
-    }
+    size_t getInstructionIdx(Instruction* instruction);
+    bool hasInstruction(Instruction* instruction) const { return std::find_if(m_instructions.begin(), m_instructions.end(), [instruction](auto const& ptr) { return ptr.get() == instruction; }) != m_instructions.end(); }
+    bool isTerminator() const;
 
 protected:
     Block(Ref<Context> ctx, const std::string& name = "");
 
 private:
     std::vector<std::unique_ptr<Instruction>> m_instructions;
-    Function* m_parentFunction;
+    Function* m_parentFunction = nullptr;
 
     UMap<Block*, uint32_t> m_successors;
     UMap<Block*, uint32_t> m_predecessors;
@@ -65,7 +66,7 @@ private:
     std::vector<Block*> m_dominated;
     USet<Block*> m_dominanceFrontiers;
     MIR::Block* m_mirBlock = nullptr;
-    Ref<Context> m_context;
+    Ref<Context> m_context = nullptr;
 
     UMap<Value*, PhiInstruction*> m_phiForValues;
 

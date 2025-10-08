@@ -33,7 +33,7 @@ set_source_files_properties(
 
 install(TARGETS scbe)
 
-if(BUILD_TESTS)
+# if(BUILD_TESTS)
 include(FetchContent)
 FetchContent_Declare(
   catch2
@@ -49,4 +49,4 @@ target_link_libraries(scbe-test PRIVATE Catch2::Catch2WithMain scbe)
 target_include_directories(scbe-test PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
-endif()
+# endif()

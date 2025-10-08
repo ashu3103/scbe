@@ -2,6 +2,7 @@
 
 #include "IR/global_value.hpp"
 #include "IR/dominator_tree.hpp"
+#include "IR/heuristics.hpp"
 #include "MIR/function.hpp"
 #include "type.hpp"
 #include <memory>
@@ -23,6 +24,7 @@ public:
     MIR::Function* getMachineFunction() const { return m_machineFunction.get(); }
     DominatorTree* getDominatorTree() const { return m_dominatorTree.get(); }
     Unit* getUnit() const { return m_unit; }
+    Heuristics& getHeuristics() { return m_heuristics; }
 
     const std::vector<std::unique_ptr<Block>>& getBlocks() const { return m_blocks; }
     const std::vector<AllocateInstruction*>& getAllocations() const { return m_allocations; }
@@ -30,6 +32,7 @@ public:
     bool isNative() const { return m_isNative; }
     bool isDominatorTreeDirty() const { return m_dominatorTreeDirty; }
     bool hasBody() const { return !m_blocks.empty(); }
+    bool isRecursive() const { return m_isRecursive; }
 
     void replace(Value* replace, Value* with);
 
@@ -39,6 +42,7 @@ public:
     void removeInstruction(Instruction* instruction);
     void setMachineFunction(std::unique_ptr<MIR::Function> function) { m_machineFunction = std::move(function); }
     void removeBlock(Block* block);
+    void setDominatorTreeDirty() { m_dominatorTreeDirty = true; }
 
     Block* insertBlock(const std::string name = "");
     Block* insertBlockAfter(Block* after, const std::string name = "");
@@ -48,7 +52,11 @@ public:
     void insertBlockAfter(Block* after, std::unique_ptr<Block> block);
     void insertBlockBefore(Block* before, std::unique_ptr<Block> block);
 
+    void mergeBlocks(Block* into, Block* from);
+
     void computeDominatorTree();
+    size_t getInstructionIdx(Instruction* instruction) const;
+    size_t getInstructionSize() const;
 
     auto getBlockIdx(Block* block) {
         return std::find_if(m_blocks.begin(), m_blocks.end(),
@@ -67,10 +75,15 @@ protected:
     
     bool m_isNative = false;
     bool m_dominatorTreeDirty = true;
+    bool m_isRecursive = false;
+
+    Heuristics m_heuristics;
 
 friend class Block;
 friend class MIR::Function;
 friend class scbe::Unit;
+friend class CallAnalysis;
+friend class AllocateInstruction;
 };
 
 }

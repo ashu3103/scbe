@@ -73,7 +73,7 @@ bool ComputeDominators::run(IR::Function* function) {
         }
     }
 
-    return true;
+    return false;
 }
 
 }

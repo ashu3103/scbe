@@ -4,8 +4,8 @@
 #include "IR/block.hpp"
 #include "MIR/function.hpp"
 #include "IR/function.hpp"
+#include "MIR/instruction.hpp"
 #include "MIR/operand.hpp"
-#include "MIR/printer.hpp"
 #include "MIR/stack_frame.hpp"
 #include "target/call_info.hpp"
 #include "target/instruction_info.hpp"
@@ -182,18 +182,20 @@ void x64TargetLowering::lowerFunction(MIR::Function* function) {
     }
     function->setFunctionPrologueSize(block->getInstructions().size() - beg);
 
-    for(auto& bb : function->getBlocks()) {
-        if(!bb->isTerminator(m_instructionInfo))
-            continue;
+    for(MIR::Instruction* ret : m_returnInstructions) {
+        MIR::Block* bb = ret->getParentBlock();
+        size_t idx = bb->getInstructionIdx(ret);
 
         if(size > 0) {
             if(size <= std::numeric_limits<int8_t>().max())
-                bb->addInstructionBeforeTerminator(instr((uint32_t)Opcode::Add64r8i, m_registerInfo->getRegister(x64::RegisterId::RSP), ctx->getImmediateInt(size, MIR::ImmediateInt::imm8)));
+                bb->addInstructionAt(instr((uint32_t)Opcode::Add64r8i, m_registerInfo->getRegister(x64::RegisterId::RSP), ctx->getImmediateInt(size, MIR::ImmediateInt::imm8)), idx++);
             else
-                bb->addInstructionBeforeTerminator(instr((uint32_t)Opcode::Add64r32i, m_registerInfo->getRegister(x64::RegisterId::RSP), ctx->getImmediateInt(size, MIR::ImmediateInt::imm32)));
+                bb->addInstructionAt(instr((uint32_t)Opcode::Add64r32i, m_registerInfo->getRegister(x64::RegisterId::RSP), ctx->getImmediateInt(size, MIR::ImmediateInt::imm32)), idx++);
         }
-        bb->addInstructionBeforeTerminator(instr((uint32_t)Opcode::Pop64r, m_registerInfo->getRegister(x64::RegisterId::RBP)));
+        bb->addInstructionAt(instr((uint32_t)Opcode::Pop64r, m_registerInfo->getRegister(x64::RegisterId::RBP)), idx++);
     }
+
+    m_returnInstructions.clear();
 }
 
 void x64TargetLowering::lowerSwitch(MIR::Block* block, MIR::SwitchLowering* lowering) {
@@ -302,7 +304,9 @@ void x64TargetLowering::lowerReturn(MIR::Block* block, MIR::ReturnLowering* lowe
         }
     }
 
-    block->addInstructionAt(instr((uint32_t)Opcode::Ret), inIdx++);
+    auto ret = instr((uint32_t)Opcode::Ret);
+    m_returnInstructions.push_back(ret.get());
+    block->addInstructionAt(std::move(ret), inIdx++);
 }
 
 }

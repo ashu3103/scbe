@@ -16,6 +16,9 @@ public:
     void resetInsertPoint() { m_insertPoint = nullptr; }
     void setCurrentBlock(Block* block) { m_currentBlock = block; resetInsertPoint(); }
 
+    Instruction* getInsertPoint() const { return m_insertPoint; }
+    Block* getCurrentBlock() const { return m_currentBlock; }
+
     Value* createAllocate(Type* type, const std::string& name = "");
     Value* createLoad(Value* ptr, const std::string& name = "");
     Value* createStore(Value* ptr, Value* value);
@@ -72,6 +75,8 @@ public:
     void createJump(Block* to);
     void createSwitch(Value* value, Block* defaultBlock, const std::vector<std::pair<ConstantInt*, Block*>>& cases);
 
+    void setInsertBefore(bool insertBefore) { m_insertBefore = insertBefore; }
+
 private:
     void insert(std::unique_ptr<Instruction> instruction);
 
@@ -79,6 +84,7 @@ private:
     Ref<Context> m_context;
     Block* m_currentBlock;
     Instruction* m_insertPoint = nullptr;
+    bool m_insertBefore = false;
 
     Folder m_folder;
 };

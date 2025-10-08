@@ -946,7 +946,7 @@ MIR::Operand* emitGEP(EMITTER_ARGS) {
     ISel::DAG::Instruction* i = cast<ISel::DAG::Instruction>(node);
     MIR::Register* ret = cast<MIR::Register>(isel->emitOrGet(i->getResult(), block));
     MIR::Operand* base = isel->emitOrGet(i->getOperands().at(0), block);
-    Type* curType = ((Value*)i->getOperands().at(0))->getType();
+    Type* curType = ((Value*)extractOperand(i->getOperands().at(0)))->getType();
     int64_t curOff = 0;
 
     if(base->getKind() == MIR::Operand::Kind::FrameIndex) {
@@ -994,19 +994,20 @@ MIR::Operand* emitGEP(EMITTER_ARGS) {
     MIR::Operand* off = nullptr;
     uint32_t opcode = 0;
     Ref<Context> ctx = block->getParentFunction()->getIRFunction()->getUnit()->getContext();
-    if(curOff < 0) {
-        curOff *= -1;
-        off = ((AArch64InstructionInfo*)instrInfo)->getImmediate(block, ctx->getImmediateInt(curOff, size));
-        if(off->isRegister()) opcode = size <= 4 ? OPCODE(Sub32rr) : OPCODE(Sub64rr);
-        else opcode = size <= 4 ? OPCODE(Sub32ri) : OPCODE(Sub64ri);
+    if(curOff != 0) {
+        if(curOff < 0) {
+            curOff *= -1;
+            off = ((AArch64InstructionInfo*)instrInfo)->getImmediate(block, ctx->getImmediateInt(curOff, size));
+            if(off->isRegister()) opcode = size <= 4 ? OPCODE(Sub32rr) : OPCODE(Sub64rr);
+            else opcode = size <= 4 ? OPCODE(Sub32ri) : OPCODE(Sub64ri);
+        }
+        else {
+            off = ((AArch64InstructionInfo*)instrInfo)->getImmediate(block, ctx->getImmediateInt(curOff, size));
+            if(off->isRegister()) opcode = size <= 4 ? OPCODE(Add32rr) : OPCODE(Add64rr);
+            else opcode = size <= 4 ? OPCODE(Add32ri) : OPCODE(Add64ri);
+        }
+        block->addInstruction(instr(opcode, ret, cast<MIR::Register>(base), off));
     }
-    else {
-        off = ((AArch64InstructionInfo*)instrInfo)->getImmediate(block, ctx->getImmediateInt(curOff, size));
-        if(off->isRegister()) opcode = size <= 4 ? OPCODE(Add32rr) : OPCODE(Add64rr);
-        else opcode = size <= 4 ? OPCODE(Add32ri) : OPCODE(Add64ri);
-    }
-    block->addInstruction(instr(opcode, ret, cast<MIR::Register>(base), off));
-    // }
 
     return ret;
 }

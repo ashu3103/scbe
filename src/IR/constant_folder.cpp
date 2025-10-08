@@ -27,7 +27,7 @@ bool ConstantFolder::run(IR::Instruction* instruction) {
 
         instruction->getParentBlock()->getParentFunction()->removeInstruction(instruction);
         restart();
-        return false;
+        return true;
     }
 
     if(!result) return false;
@@ -37,7 +37,7 @@ bool ConstantFolder::run(IR::Instruction* instruction) {
 
     restart();
 
-    return false;
+    return true;
 }
 
 }

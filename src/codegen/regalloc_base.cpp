@@ -49,7 +49,7 @@ bool RegallocBase::run(MIR::Function* function) {
             }
         } while(change);
     }
-    return true;
+    return false;
 }
 
 void RegallocBase::processSpills(MIR::Function* function) {
