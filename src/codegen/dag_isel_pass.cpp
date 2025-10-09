@@ -353,7 +353,7 @@ ISel::DAG::Node* DagISelPass::buildNonChain(IR::Value* value) {
             return buildBlock(cast<IR::Block>(value));
         case IR::Value::ValueKind::UndefValue: {
             IR::UndefValue* undef = (IR::UndefValue*)value;
-            auto node = makeOrGetConstInt(0, undef->getType());
+            auto node = buildNonChain(IR::Constant::getZeroInitalizer(undef->getType(), m_dataLayout, m_context));
             m_valuesToNodes[value] = node;
             return node;
         }
