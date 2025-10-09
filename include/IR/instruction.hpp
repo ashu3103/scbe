@@ -70,6 +70,7 @@ public:
         FMul,
         Switch,
         ExtractValue,
+        Xor,
         Count
     };
 

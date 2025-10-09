@@ -131,6 +131,9 @@ Value* Folder::foldBinOpInternalInt(Instruction::Opcode opcode, ConstantInt* lhs
         case Instruction::Opcode::Or: {
             return ConstantInt::get(bits, lhs->getValue() | rhs->getValue(), m_context);
         }
+        case Instruction::Opcode::Xor: {
+            return ConstantInt::get(bits, lhs->getValue() ^ rhs->getValue(), m_context);
+        }
         case Instruction::Opcode::IRem: {
             return ConstantInt::get(bits, lhs->getValue() % rhs->getValue(), m_context);
         }

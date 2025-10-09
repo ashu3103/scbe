@@ -32,6 +32,7 @@ enum class Opcode : uint32_t {
     Cmp32rr, Cmp32ri, Cmp32rm, Cmp32mi,
     Cmp16rr, Cmp16ri, Cmp16rm, Cmp16mi,
     Cmp8rr, Cmp8ri, Cmp8rm, Cmp8mi,
+    Test64rr, Test32rr, Test16rr, Test8rr,
     Jmp,
     Je, Jne, Jl, Jle, Jg, Jge,
     Jb, Jbe, Ja, Jae,
@@ -111,6 +112,8 @@ enum class Opcode : uint32_t {
     Xor16ri, Xor16rr,
     Xor32ri, Xor32rr,
     Xor64rr,
+
+    Not64r, Not32r, Not16r, Not8r,
 
     Cmpssrr,
     Cmpsdrr,

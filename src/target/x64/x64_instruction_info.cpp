@@ -318,6 +318,16 @@ x64InstructionInfo::x64InstructionInfo(RegisterInfo* registerInfo, Ref<Context> 
         ret[(size_t)Opcode::IMul32rri] = {"IMul32rri", 1, 3, 4, false, false, {Restriction::reg(), Restriction::reg(), Restriction::imm()}};
         ret[(size_t)Opcode::IMul16rri] = {"IMul16rri", 1, 3, 2, false, false, {Restriction::reg(), Restriction::reg(), Restriction::imm()}};
 
+        ret[(size_t)Opcode::Test64rr] = {"Test64rr", 1, 2, 8, false, false, {Restriction::reg(), Restriction::reg()}};
+        ret[(size_t)Opcode::Test32rr] = {"Test32rr", 1, 2, 4, false, false, {Restriction::reg(), Restriction::reg()}};
+        ret[(size_t)Opcode::Test16rr] = {"Test16rr", 1, 2, 2, false, false, {Restriction::reg(), Restriction::reg()}};
+        ret[(size_t)Opcode::Test8rr] = {"Test8rr",  1, 2, 1, false, false, {Restriction::reg(), Restriction::reg()}};
+
+        ret[(size_t)Opcode::Not64r] = {"Not64r", 1, 1, 8, false, false, {Restriction::reg()}};
+        ret[(size_t)Opcode::Not32r] = {"Not32r", 1, 1, 8, false, false, {Restriction::reg()}};
+        ret[(size_t)Opcode::Not16r] = {"Not16r", 1, 1, 8, false, false, {Restriction::reg()}};
+        ret[(size_t)Opcode::Not8r] = {"Not8r", 1, 1, 8, false, false, {Restriction::reg()}};
+
         return ret;
     }();
     
@@ -571,6 +581,11 @@ x64InstructionInfo::x64InstructionInfo(RegisterInfo* registerInfo, Ref<Context> 
         ret[(size_t)Opcode::Xor32rr] = {"xor"};
         ret[(size_t)Opcode::Xor64rr] = {"xor"};
 
+        ret[(size_t)Opcode::Not64r] = {"not"};
+        ret[(size_t)Opcode::Not32r] = {"not"};
+        ret[(size_t)Opcode::Not16r] = {"not"};
+        ret[(size_t)Opcode::Not8r] = {"not"};
+
         ret[(size_t)Opcode::Cmpssrr] = {"cmpss"};
         ret[(size_t)Opcode::Cmpsdrr] = {"cmpsd"};
 
@@ -616,6 +631,11 @@ x64InstructionInfo::x64InstructionInfo(RegisterInfo* registerInfo, Ref<Context> 
         ret[(size_t)Opcode::IMul64rri] = {"imul"};
         ret[(size_t)Opcode::IMul32rri] = {"imul"};
         ret[(size_t)Opcode::IMul16rri] = {"imul"};
+
+        ret[(size_t)Opcode::Test64rr] = {"test"};
+        ret[(size_t)Opcode::Test32rr] = {"test"};
+        ret[(size_t)Opcode::Test16rr] = {"test"};
+        ret[(size_t)Opcode::Test8rr] = {"test"};
 
         return ret;
     }();
@@ -670,6 +690,7 @@ x64InstructionInfo::x64InstructionInfo(RegisterInfo* registerInfo, Ref<Context> 
             .match(matchCondJumpComparisonRR).emit(emitCondJumpComparisonRR).withCoveredOperands({2}).withName("CondJumpComparisonRR")
             .match(matchFCondJumpComparisonRF).emit(emitFCondJumpComparisonRR).withCoveredOperands({2}).withName("FCondJumpComparisonRF")
             .match(matchFCondJumpComparisonRR).emit(emitFCondJumpComparisonRR).withCoveredOperands({2}).withName("FCondJumpComparisonRR")
+            .match(matchCondJumpRegister).emit(emitCondJumpRegister).withName("CondJumpRegister")
         .forOpcode(Node::NodeKind::LoadConstant)
             .match(matchConstantFloat).emit(emitConstantFloat).withName("ConstantFloat")
         .forOpcode(Node::NodeKind::LoadGlobal)
@@ -716,6 +737,9 @@ x64InstructionInfo::x64InstructionInfo(RegisterInfo* registerInfo, Ref<Context> 
         .forOpcode(Node::NodeKind::Or)
             .match(matchOrImmediate).emit(emitOrImmediate).withName("OrImmediate")
             .match(matchOrRegister).emit(emitOrRegister).withName("OrRegister")
+        .forOpcode(Node::NodeKind::Xor)
+            .match(matchXorImmediate).emit(emitXorImmediate).withName("XorImmediate")
+            .match(matchXorRegister).emit(emitXorRegister).withName("XorRegister")
         .forOpcodes({Node::NodeKind::ICmpEq, Node::NodeKind::ICmpNe, Node::NodeKind::ICmpGt, Node::NodeKind::ICmpGe, Node::NodeKind::ICmpLt, Node::NodeKind::ICmpLe,
                     Node::NodeKind::UCmpGt, Node::NodeKind::UCmpGe, Node::NodeKind::UCmpLt, Node::NodeKind::UCmpLe,
                     Node::NodeKind::FCmpEq, Node::NodeKind::FCmpNe, Node::NodeKind::FCmpGt, Node::NodeKind::FCmpGe, Node::NodeKind::FCmpLt, Node::NodeKind::FCmpLe})

@@ -59,7 +59,7 @@ bool matchConstantInt(MATCHER_ARGS) {
 MIR::Operand* emitConstantInt(EMITTER_ARGS) {
     ISel::DAG::ConstantInt* constant = cast<ISel::DAG::ConstantInt>(node);
     Ref<Context> ctx = block->getParentFunction()->getIRFunction()->getUnit()->getContext();
-    return ctx->getImmediateInt(constant->getValue(), (MIR::ImmediateInt::Size)(cast<IntegerType>(constant->getType())->getBits() / 8));
+    return ctx->getImmediateInt(constant->getValue(), (MIR::ImmediateInt::Size)(std::max(1, cast<IntegerType>(constant->getType())->getBits() / 8)));
 }
 
 bool matchMultiValue(MATCHER_ARGS) {
@@ -454,6 +454,24 @@ bool matchJump(MATCHER_ARGS) {
 MIR::Operand* emitJump(EMITTER_ARGS) {
     ISel::DAG::Instruction* i = cast<ISel::DAG::Instruction>(node);
     block->addInstruction(instr(OPCODE(B), isel->emitOrGet(extractOperand(i->getOperands().at(0)), block)));
+    return nullptr;
+}
+
+bool matchCondJumpRegister(MATCHER_ARGS) {
+    ISel::DAG::Instruction* i = cast<ISel::DAG::Instruction>(node);
+    return i->getKind() == Node::NodeKind::Jump && i->getOperands().size() > 1 && isRegister(extractOperand(i->getOperands().at(2)));
+}
+
+MIR::Operand* emitCondJumpRegister(EMITTER_ARGS) {
+    ISel::DAG::Instruction* i = cast<ISel::DAG::Instruction>(node);
+    MIR::Register* cond = cast<MIR::Register>(isel->emitOrGet(i->getOperands().at(2), block));
+    size_t fromSize = instrInfo->getRegisterInfo()->getRegisterClass(
+        instrInfo->getRegisterInfo()->getRegisterIdClass(cond->getId(), block->getParentFunction()->getRegisterInfo())
+    ).getSize();
+    uint32_t cmpOp = selectOpcode(fromSize, false, {OPCODE(Subs32ri), OPCODE(Subs32ri), OPCODE(Subs32ri), OPCODE(Subs64ri)}, {});
+    block->addInstruction(instr(cmpOp, instrInfo->getRegisterInfo()->getRegister(fromSize > 4 ? XZR : WZR), cond, context->getImmediateInt(0, MIR::ImmediateInt::imm8)));
+    block->addInstruction(instr(OPCODE(Bne), isel->emitOrGet(i->getOperands().at(0), block)));
+    block->addInstruction(instr(OPCODE(B), isel->emitOrGet(i->getOperands().at(1), block)));
     return nullptr;
 }
 
@@ -1574,6 +1592,51 @@ MIR::Operand* emitOrRegister(EMITTER_ARGS) {
     MIR::Register* right = cast<MIR::Register>(isel->emitOrGet(i->getOperands().at(1), block));
     MIR::Operand* ret = isel->emitOrGet(i->getResult(), block);
     uint32_t op = selectOpcode(fromSize, false, {OPCODE(Orr32rr), OPCODE(Orr32rr), OPCODE(Orr32rr), OPCODE(Orr64rr)}, {});
+    block->addInstruction(instr(op, ret, left, right));
+    return ret;
+}
+
+bool matchXorImmediate(MATCHER_ARGS) {
+    ISel::DAG::Instruction* i = cast<ISel::DAG::Instruction>(node);
+    return extractOperand(i->getOperands().at(1))->getKind() == Node::NodeKind::ConstantInt;
+}
+MIR::Operand* emitXorImmediate(EMITTER_ARGS) {
+    ISel::DAG::Instruction* i = cast<ISel::DAG::Instruction>(node);
+    AArch64InstructionInfo* aInstrInfo = (AArch64InstructionInfo*)instrInfo;
+    MIR::Register* left = cast<MIR::Register>(isel->emitOrGet(i->getOperands().at(0), block));
+    size_t fromSize = instrInfo->getRegisterInfo()->getRegisterClass(
+        instrInfo->getRegisterInfo()->getRegisterIdClass(left->getId(), block->getParentFunction()->getRegisterInfo())
+    ).getSize();
+
+    MIR::Operand* right = aInstrInfo->getImmediate(block, cast<MIR::ImmediateInt>(isel->emitOrGet(i->getOperands().at(1), block)));
+    MIR::Operand* ret = isel->emitOrGet(i->getResult(), block);
+
+    if(right->isRegister()) {
+        uint32_t op = selectOpcode(fromSize, false, {OPCODE(Eor32rr), OPCODE(Orr32rr), OPCODE(Eor32rr), OPCODE(Eor64rr)}, {});
+        block->addInstruction(instr(op, ret, left, right));
+    }
+    else {
+        uint32_t op = selectOpcode(fromSize, false, {OPCODE(Eor32ri), OPCODE(Eor32ri), OPCODE(Eor32ri), OPCODE(Eor64ri)}, {});
+        block->addInstruction(instr(op, ret, left, right));
+    }
+
+    return ret;
+}
+
+bool matchXorRegister(MATCHER_ARGS) {
+    ISel::DAG::Instruction* i = cast<ISel::DAG::Instruction>(node);
+    return isRegister(extractOperand(i->getOperands().at(1)));
+}
+MIR::Operand* emitXorRegister(EMITTER_ARGS) {
+    ISel::DAG::Instruction* i = cast<ISel::DAG::Instruction>(node);
+    MIR::Register* left = cast<MIR::Register>(isel->emitOrGet(i->getOperands().at(0), block));
+    size_t fromSize = instrInfo->getRegisterInfo()->getRegisterClass(
+        instrInfo->getRegisterInfo()->getRegisterIdClass(left->getId(), block->getParentFunction()->getRegisterInfo())
+    ).getSize();
+
+    MIR::Register* right = cast<MIR::Register>(isel->emitOrGet(i->getOperands().at(1), block));
+    MIR::Operand* ret = isel->emitOrGet(i->getResult(), block);
+    uint32_t op = selectOpcode(fromSize, false, {OPCODE(Eor32rr), OPCODE(Eor32rr), OPCODE(Eor32rr), OPCODE(Eor64rr)}, {});
     block->addInstruction(instr(op, ret, left, right));
     return ret;
 }

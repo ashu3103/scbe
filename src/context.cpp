@@ -42,7 +42,7 @@ IntegerType *Context::getIntegerType(uint8_t bits) const {
   default:
     break;
   }
-  return nullptr;
+  throw std::runtime_error("Unsupported integer type");
 }
 
 FloatType* Context::getFloatType(uint8_t bits) const {
@@ -51,7 +51,7 @@ FloatType* Context::getFloatType(uint8_t bits) const {
         case 64: return getF64Type();
         default: break;
     }
-    return nullptr;
+    throw std::runtime_error("Unsupported float type");
 }
 
 IntegerType* Context::getI1Type() const {

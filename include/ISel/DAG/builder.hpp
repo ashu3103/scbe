@@ -42,6 +42,7 @@ public:
     Node* createARightShift(Node* lhs, Node* rhs, Register* reg);
     Node* createAnd(Node* lhs, Node* rhs, Register* reg);
     Node* createOr(Node* lhs, Node* rhs, Register* reg);
+    Node* createXor(Node* lhs, Node* rhs, Register* reg);
     Node* createPhi(Register* reg, std::vector<Node*> values);
     Node* createGEP(Register* reg, Node* ptr, std::vector<Node*> indices);
     Node* createZext(Register* result, Node* value, Type* toType);

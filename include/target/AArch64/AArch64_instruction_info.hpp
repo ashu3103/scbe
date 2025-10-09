@@ -47,6 +47,9 @@ enum class Opcode : uint32_t {
 
     And64rr, And64ri,
     And32rr, And32ri,
+
+    Eor64rr, Eor64ri,
+    Eor32rr, Eor32ri,
     
     Sbfm64, Sbfm32, Ubfm64, Ubfm32,
 

@@ -65,6 +65,7 @@ public:
         FMul,
         Switch,
         MultiValue,
+        Xor,
         Count
     };
 

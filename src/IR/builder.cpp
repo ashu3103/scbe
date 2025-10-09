@@ -2,6 +2,7 @@
 #include "IR/function.hpp"
 #include "IR/block.hpp"
 #include "IR/global_value.hpp"
+#include "IR/instruction.hpp"
 #include "IR/value.hpp"
 #include <cassert>
 #include <memory>
@@ -282,6 +283,15 @@ Value* Builder::createAnd(Value* lhs, Value* rhs, const std::string& name) {
     return ret;
 }
 
+Value* Builder::createXor(Value* lhs, Value* rhs, const std::string& name) {
+    assert(rhs->getType()->isIntType());
+    if(auto v = m_folder.foldBinOp(Instruction::Opcode::Xor, lhs, rhs)) return v;
+    auto instr = std::make_unique<BinaryOperator>(Instruction::Opcode::Xor, lhs, rhs, name);
+    auto ret = instr.get();
+	insert(std::move(instr));
+    return ret;
+}
+
 Value* Builder::createOr(Value* lhs, Value* rhs, const std::string& name) {
     assert(rhs->getType()->isIntType());
     if(auto v = m_folder.foldBinOp(Instruction::Opcode::Or, lhs, rhs)) return v;
@@ -423,6 +433,17 @@ Value* Builder::createInttoptr(Value* value, Type* toType, const std::string& na
 
 Value* Builder::createExtractValue(Value* from, ConstantInt* index, const std::string& name) {
     auto instr = std::make_unique<ExtractValueInstruction>(from, index, name);
+    auto ret = instr.get();
+    insert(std::move(instr));
+    return ret;
+}
+
+Value* Builder::createPhi(const std::vector<std::pair<Value*, Block*>>& values, Type* type, const std::string& name) {
+    auto instr = std::make_unique<PhiInstruction>(type, nullptr, name);
+    for(auto& [value, block] : values) {
+        instr->addOperand(value);
+        instr->addOperand(block);
+    }
     auto ret = instr.get();
     insert(std::move(instr));
     return ret;

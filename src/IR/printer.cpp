@@ -297,6 +297,9 @@ void HumanPrinter::print(std::ostream& os, Instruction::Opcode opcode) {
     case Instruction::Opcode::Or:
         os << "or";
         break;
+    case Instruction::Opcode::Xor:
+        os << "xor";
+        break;
     case Instruction::Opcode::IDiv:
         os << "idiv";
         break;

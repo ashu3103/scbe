@@ -172,6 +172,13 @@ Node* Builder::createAnd(Node* lhs, Node* rhs, Register* reg) {
     return retPtr;
 }
 
+Node* Builder::createXor(Node* lhs, Node* rhs, Register* reg) {
+    auto ret = std::make_unique<Instruction>(Node::NodeKind::Xor, reg, lhs, rhs);
+    auto retPtr = ret.get();
+    insert(std::move(ret));
+    return retPtr;
+}
+
 Node* Builder::createOr(Node* lhs, Node* rhs, Register* reg) {
     auto ret = std::make_unique<Instruction>(Node::NodeKind::Or, reg, lhs, rhs);
     auto retPtr = ret.get();

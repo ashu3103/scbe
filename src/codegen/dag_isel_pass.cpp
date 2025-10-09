@@ -501,6 +501,9 @@ ISel::DAG::Node* DagISelPass::buildInstruction(IR::Instruction* value) {
         case IR::Instruction::Opcode::Or: {
             GET_BINOP(Or);
         }
+        case IR::Instruction::Opcode::Xor: {
+            GET_BINOP(Xor);
+        }
         case IR::Instruction::Opcode::GetElementPtr: {
             auto gep = cast<IR::GEPInstruction>(value);
             ISel::DAG::Register* node = makeOrGetRegister(value, value->getType());

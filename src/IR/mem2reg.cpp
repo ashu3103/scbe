@@ -83,7 +83,8 @@ void Mem2Reg::rename(IR::DominatorTree* tree, IR::Block* current, UMap<IR::Value
         }
         else if(instruction->getOpcode() == IR::Instruction::Opcode::Phi) {
             auto phi = cast<IR::PhiInstruction>(instruction.get());
-            stack[phi->getAlloca()].push_back(instruction.get());
+            if(phi->getAlloca())
+                stack[phi->getAlloca()].push_back(instruction.get());
         }
     }
 

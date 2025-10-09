@@ -53,6 +53,7 @@ public:
     Value* createARightShift(Value* lhs, Value* rhs, const std::string& name = "");
     Value* createAnd(Value* lhs, Value* rhs, const std::string& name = "");
     Value* createOr(Value* lhs, Value* rhs, const std::string& name = "");
+    Value* createXor(Value* lhs, Value* rhs, const std::string& name = "");
     Value* createGEP(Type* type, Value* ptr, const std::vector<Value*>& indices, const std::string& name = "");
     Value* createCall(Value* callee, const std::string& name = "");
     Value* createCall(Value* callee, const std::vector<Value*>& args, const std::string& name = "");
@@ -69,6 +70,7 @@ public:
     Value* createPtrtoint(Value* value, Type* toType, const std::string& name = "");
     Value* createInttoptr(Value* value, Type* toType, const std::string& name = "");
     Value* createExtractValue(Value* from, ConstantInt* index, const std::string& name = "");
+    Value* createPhi(const std::vector<std::pair<Value*, Block*>>& values, Type* type, const std::string& name = "");
 
     void createRet(Value* value = nullptr);
     void createCondJump(Block* first, Block* second, Value* cond);

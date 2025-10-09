@@ -74,6 +74,9 @@ MIR::Operand* emitPhi(EMITTER_ARGS);
 bool matchJump(MATCHER_ARGS);
 MIR::Operand* emitJump(EMITTER_ARGS);
 
+bool matchCondJumpRegister(MATCHER_ARGS);
+MIR::Operand* emitCondJumpRegister(EMITTER_ARGS);
+
 bool matchCondJumpComparisonII(MATCHER_ARGS);
 MIR::Operand* emitCondJumpComparisonII(EMITTER_ARGS);
 
@@ -180,6 +183,12 @@ MIR::Operand* emitOrImmediate(EMITTER_ARGS);
 
 bool matchOrRegister(MATCHER_ARGS);
 MIR::Operand* emitOrRegister(EMITTER_ARGS);
+
+bool matchXorImmediate(MATCHER_ARGS);
+MIR::Operand* emitXorImmediate(EMITTER_ARGS);
+
+bool matchXorRegister(MATCHER_ARGS);
+MIR::Operand* emitXorRegister(EMITTER_ARGS);
 
 bool matchIDiv(MATCHER_ARGS);
 MIR::Operand* emitIDiv(EMITTER_ARGS);

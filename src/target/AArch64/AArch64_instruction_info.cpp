@@ -94,6 +94,10 @@ AArch64InstructionInfo::AArch64InstructionInfo(RegisterInfo* registerInfo, Ref<C
         ret[(size_t)Opcode::And64ri] = InstructionDescriptor("And64ri", 1, 3, 8, false, false, {Restriction::reg(true), Restriction::reg(), Restriction::imm()});
         ret[(size_t)Opcode::And32rr] = InstructionDescriptor("And32rr", 1, 3, 4, false, false, {Restriction::reg(true), Restriction::reg(), Restriction::reg()});
         ret[(size_t)Opcode::And32ri] = InstructionDescriptor("And32ri", 1, 3, 4, false, false, {Restriction::reg(true), Restriction::reg(), Restriction::imm()});
+        ret[(size_t)Opcode::Eor64rr] = InstructionDescriptor("Eor64rr", 1, 3, 8, false, false, {Restriction::reg(true), Restriction::reg(), Restriction::reg()});
+        ret[(size_t)Opcode::Eor64ri] = InstructionDescriptor("Eor64ri", 1, 3, 8, false, false, {Restriction::reg(true), Restriction::reg(), Restriction::imm()});
+        ret[(size_t)Opcode::Eor32rr] = InstructionDescriptor("Eor32rr", 1, 3, 4, false, false, {Restriction::reg(true), Restriction::reg(), Restriction::reg()});
+        ret[(size_t)Opcode::Eor32ri] = InstructionDescriptor("Eor32ri", 1, 3, 4, false, false, {Restriction::reg(true), Restriction::reg(), Restriction::imm()});
         ret[(size_t)Opcode::Sbfm64] = InstructionDescriptor("Sbfm64", 1, 4, 8, false, false, {Restriction::reg(true), Restriction::reg(), Restriction::imm(), Restriction::imm()});
         ret[(size_t)Opcode::Sbfm32] = InstructionDescriptor("Sbfm32", 1, 4, 4, false, false, {Restriction::reg(true), Restriction::reg(), Restriction::imm(), Restriction::imm()});
         ret[(size_t)Opcode::Ubfm64] = InstructionDescriptor("Ubfm64", 1, 4, 8, false, false, {Restriction::reg(true), Restriction::reg(), Restriction::imm(), Restriction::imm()});
@@ -213,6 +217,10 @@ AArch64InstructionInfo::AArch64InstructionInfo(RegisterInfo* registerInfo, Ref<C
         ret[(size_t)Opcode::And64ri] = {"and"};
         ret[(size_t)Opcode::And32rr] = {"and"};
         ret[(size_t)Opcode::And32ri] = {"and"};
+        ret[(size_t)Opcode::Eor64rr] = {"eor"};
+        ret[(size_t)Opcode::Eor64ri] = {"eor"};
+        ret[(size_t)Opcode::Eor32rr] = {"eor"};
+        ret[(size_t)Opcode::Eor32ri] = {"eor"};
         ret[(size_t)Opcode::Sbfm64] = {"sbfm"};
         ret[(size_t)Opcode::Sbfm32] = {"sbfm"};
         ret[(size_t)Opcode::Ubfm64] = {"ubfm"};
@@ -299,11 +307,12 @@ AArch64InstructionInfo::AArch64InstructionInfo(RegisterInfo* registerInfo, Ref<C
             .match(matchPhi).emit(emitPhi).withName("Phi")
         .forOpcode(Node::NodeKind::Jump)
             .match(matchJump).emit(emitJump).withName("Jump")
-            .match(matchCondJumpComparisonRI).emit(emitCondJumpComparisonRI).withName("CondJumpComparisonRI")
-            .match(matchCondJumpComparisonII).emit(emitCondJumpComparisonII).withName("CondJumpComparisonII")
-            .match(matchCondJumpComparisonRR).emit(emitCondJumpComparisonRR).withName("CondJumpComparisonRR")
-            .match(matchFCondJumpComparisonRF).emit(emitFCondJumpComparisonRR).withName("FCondJumpComparisonRF")
-            .match(matchFCondJumpComparisonRR).emit(emitFCondJumpComparisonRR).withName("FCondJumpComparisonRR")
+            .match(matchCondJumpComparisonRI).emit(emitCondJumpComparisonRI).withCoveredOperands({2}).withName("CondJumpComparisonRI")
+            .match(matchCondJumpComparisonII).emit(emitCondJumpComparisonII).withCoveredOperands({2}).withName("CondJumpComparisonII")
+            .match(matchCondJumpComparisonRR).emit(emitCondJumpComparisonRR).withCoveredOperands({2}).withName("CondJumpComparisonRR")
+            .match(matchFCondJumpComparisonRF).emit(emitFCondJumpComparisonRR).withCoveredOperands({2}).withName("FCondJumpComparisonRF")
+            .match(matchFCondJumpComparisonRR).emit(emitFCondJumpComparisonRR).withCoveredOperands({2}).withName("FCondJumpComparisonRR")
+            .match(matchCondJumpRegister).emit(emitCondJumpRegister).withName("CondJumpRegister")
         .forOpcode(Node::NodeKind::LoadConstant)
             .match(matchConstantFloat).emit(emitConstantFloat).withName("ConstantFloat")
         .forOpcode(Node::NodeKind::LoadGlobal)
@@ -349,6 +358,9 @@ AArch64InstructionInfo::AArch64InstructionInfo(RegisterInfo* registerInfo, Ref<C
         .forOpcode(Node::NodeKind::Or)
             .match(matchOrImmediate).emit(emitOrImmediate).withName("OrImmediate")
             .match(matchOrRegister).emit(emitOrRegister).withName("OrRegister")
+        .forOpcode(Node::NodeKind::Xor)
+            .match(matchXorImmediate).emit(emitXorImmediate).withName("XorImmediate")
+            .match(matchXorRegister).emit(emitXorRegister).withName("XorRegister")
         .forOpcodes({Node::NodeKind::ICmpEq, Node::NodeKind::ICmpNe, Node::NodeKind::ICmpGt, Node::NodeKind::ICmpGe, Node::NodeKind::ICmpLt, Node::NodeKind::ICmpLe,
                     Node::NodeKind::UCmpGt, Node::NodeKind::UCmpGe, Node::NodeKind::UCmpLt, Node::NodeKind::UCmpLe,
                     Node::NodeKind::FCmpEq, Node::NodeKind::FCmpNe, Node::NodeKind::FCmpGt, Node::NodeKind::FCmpGe, Node::NodeKind::FCmpLt, Node::NodeKind::FCmpLe})
