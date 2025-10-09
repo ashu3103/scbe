@@ -964,7 +964,7 @@ MIR::Operand* emitGEP(EMITTER_ARGS) {
     ISel::DAG::Instruction* i = cast<ISel::DAG::Instruction>(node);
     MIR::Register* ret = cast<MIR::Register>(isel->emitOrGet(i->getResult(), block));
     MIR::Operand* base = isel->emitOrGet(i->getOperands().at(0), block);
-    Type* curType = ((Value*)extractOperand(i->getOperands().at(0)))->getType();
+    Type* curType = ((Value*)extractOperand(i->getResult()))->getType();
     int64_t curOff = 0;
 
     if(base->getKind() == MIR::Operand::Kind::FrameIndex) {

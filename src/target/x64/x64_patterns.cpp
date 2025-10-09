@@ -119,9 +119,12 @@ MIR::Operand* emitStoreInFrame(EMITTER_ARGS) {
         auto type = block->getParentFunction()->getRegisterInfo().getVirtualRegisterInfo(rr->getId()).m_type;
         op = (Opcode)selectOpcode(layout, type, {OPCODE(Mov8mr), OPCODE(Mov16mr), OPCODE(Mov32mr), OPCODE(Mov64mr)}, {OPCODE(Movssmr), OPCODE(Movsdmr)});
     }
-    else {
+    else if(from->isImmediateInt()) {
         auto imm = cast<MIR::ImmediateInt>(from);
         op = (Opcode)selectOpcode(imm->getSize(), false, {OPCODE(Mov8mi), OPCODE(Mov16mi), OPCODE(Mov32mi), OPCODE(Movm64i32)}, {});
+    }
+    else {
+        throw std::runtime_error("Unsupported operand type");
     }
     auto frameIndex = ((FrameIndex*)extractOperand(i->getOperands().at(0)));
     MIR::StackSlot slot = block->getParentFunction()->getStackFrame().getStackSlot(frameIndex->getSlot());
@@ -889,7 +892,7 @@ MIR::Operand* emitGEP(EMITTER_ARGS) {
     ISel::DAG::Instruction* i = cast<ISel::DAG::Instruction>(node);
     MIR::Register* ret = cast<MIR::Register>(isel->emitOrGet(i->getResult(), block));
     MIR::Operand* base = isel->emitOrGet(i->getOperands().at(0), block);
-    Type* curType = ((Value*)extractOperand(i->getOperands().at(0)))->getType();
+    Type* curType = ((Value*)extractOperand(i->getResult()))->getType();
     int64_t curOff = 0;
 
     if(base->getKind() == MIR::Operand::Kind::FrameIndex) {

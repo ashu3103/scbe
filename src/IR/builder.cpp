@@ -304,6 +304,7 @@ Value* Builder::createOr(Value* lhs, Value* rhs, const std::string& name) {
 Value* Builder::createGEP(Type* current, Value* ptr, const std::vector<Value*>& indices, const std::string& name) {
     assert((ptr->getType()->isPtrType() || ptr->getType()->isArrayType()) && "Expected pointer or array value");
 
+    Type* original = current;
     for(auto index : indices) {
         assert(index->getType()->isIntType() && "Expected index integer type");
         assert(current->getContainedTypes().size() > 0 && "Expected > 0 contained types");
@@ -323,7 +324,7 @@ Value* Builder::createGEP(Type* current, Value* ptr, const std::vector<Value*>& 
                 break;
         }
     }
-    auto instr = std::make_unique<GEPInstruction>(m_context->makePointerType(current), ptr, indices, name);
+    auto instr = std::make_unique<GEPInstruction>(original, ptr, indices, name);
     auto ret = instr.get();
 	insert(std::move(instr));
     return ret;

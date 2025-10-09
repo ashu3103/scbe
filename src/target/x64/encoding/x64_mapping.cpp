@@ -132,10 +132,10 @@ const std::array<InstructionEncoding, (size_t)Opcode::Count> s_instructionMappin
     table[(size_t)Opcode::Mov16mr] = InstructionEncoding({0x89});
     table[(size_t)Opcode::Mov8mr] = InstructionEncoding({0x88});
 
-    table[(size_t)Opcode::Movm64i32] = InstructionEncoding({0xC7}, false, InstructionEncoding::Normal, true, ImmediateInt::imm32);
-    table[(size_t)Opcode::Mov32mi] = InstructionEncoding({0xC7}, false, InstructionEncoding::Normal, true, ImmediateInt::imm32);
-    table[(size_t)Opcode::Mov16mi] = InstructionEncoding({0xC7}, false, InstructionEncoding::Normal, true, ImmediateInt::imm16);
-    table[(size_t)Opcode::Mov8mi] = InstructionEncoding({0xC6}, false, InstructionEncoding::Normal, true, ImmediateInt::imm8);
+    table[(size_t)Opcode::Movm64i32] = InstructionEncoding({0xC7}, false, InstructionEncoding::Normal, true, ImmediateInt::imm32, 0);
+    table[(size_t)Opcode::Mov32mi] = InstructionEncoding({0xC7}, false, InstructionEncoding::Normal, true, ImmediateInt::imm32, 0);
+    table[(size_t)Opcode::Mov16mi] = InstructionEncoding({0xC7}, false, InstructionEncoding::Normal, true, ImmediateInt::imm16, 0);
+    table[(size_t)Opcode::Mov8mi] = InstructionEncoding({0xC6}, false, InstructionEncoding::Normal, true, ImmediateInt::imm8, 0);
 
     table[(size_t)Opcode::Add64rr] = InstructionEncoding({0x01});
     table[(size_t)Opcode::Add32rr] = InstructionEncoding({0x01});

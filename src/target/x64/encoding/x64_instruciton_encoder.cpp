@@ -20,6 +20,8 @@ std::optional<Codegen::Fixup> x64InstructionEncoder::encode(MIR::Instruction* in
 
     size_t instructionPos = bytes.size();
 
+    if(descriptor.getSize() == 2) bytes.push_back(0x66);
+
     if(encoding.m_operandType == InstructionEncoding::Embedded) {
         uint8_t reg = encodeRegister(cast<MIR::Register>(instruction->getOperands().at(0))->getId());
         rexB = isExtendedRegister(reg);
