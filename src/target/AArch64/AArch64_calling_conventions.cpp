@@ -47,7 +47,7 @@ void CCAArch64AAPCS64(CallInfo& info, const std::vector<Type*>& types) {
     // Return value
     Type* retType = types[0];
     if (retType->isVoidType()) {
-        info.addRetAssign(nullptr);
+        // info.addRetAssign(nullptr);
         return;
     }
     else if (retType->isStructType()) {

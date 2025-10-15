@@ -337,4 +337,10 @@ Node* Builder::createFMul(Node* lhs, Node* rhs, Register* reg) {
     return retPtr;
 }
 
+Node* Builder::createGenericCast(Register* reg, Node* from, Type* toType) {
+    auto ret = std::make_unique<Cast>(Node::NodeKind::GenericCast, reg, from, toType);
+    auto retPtr = ret.get();
+    insert(std::move(ret));
+    return retPtr;
+}
 }

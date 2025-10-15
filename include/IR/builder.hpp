@@ -54,7 +54,7 @@ public:
     Value* createAnd(Value* lhs, Value* rhs, const std::string& name = "");
     Value* createOr(Value* lhs, Value* rhs, const std::string& name = "");
     Value* createXor(Value* lhs, Value* rhs, const std::string& name = "");
-    Value* createGEP(Type* type, Value* ptr, const std::vector<Value*>& indices, const std::string& name = "");
+    Value* createGEP(Value* ptr, const std::vector<Value*>& indices, const std::string& name = "");
     Value* createCall(Value* callee, const std::string& name = "");
     Value* createCall(Value* callee, const std::vector<Value*>& args, const std::string& name = "");
     Value* createZext(Value* value, Type* toType, const std::string& name = "");

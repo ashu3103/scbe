@@ -66,6 +66,7 @@ public:
         Switch,
         MultiValue,
         Xor,
+        GenericCast,
         Count
     };
 

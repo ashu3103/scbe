@@ -54,7 +54,7 @@ void CCx64SysV(CallInfo& info, const std::vector<Type*>& types) {
 
     Type* retType = types[0];
     if(retType->isVoidType()) {
-        info.addRetAssign(nullptr);
+        // info.addRetAssign(nullptr);
         return;
     }
     else if(retType->isFltType()) {
@@ -88,7 +88,7 @@ void CCx64Win64(CallInfo& info, const std::vector<Type*>& types) {
 
     Type* retType = types[0];
     if(retType->isVoidType()) {
-        info.addRetAssign(nullptr);
+        // info.addRetAssign(nullptr);
     } else if(retType->isFltType()) {
         info.addRetAssign(std::make_shared<RegisterAssign>(XMM0));
     } else if (retType->isStructType()) {

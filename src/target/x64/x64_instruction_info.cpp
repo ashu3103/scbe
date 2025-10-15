@@ -756,6 +756,8 @@ x64InstructionInfo::x64InstructionInfo(RegisterInfo* registerInfo, Ref<Context> 
             .match(matchFMul).emit(emitFMul).withName("FMul")
         .forOpcode(Node::NodeKind::Switch)
             .match(matchSwitch).emit(emitSwitchLowering).withName("Switch")
+        .forOpcode(Node::NodeKind::GenericCast)
+            .match(matchGenericCast).emit(emitGenericCast).withName("GenericCast")
         .build()
     );
 }

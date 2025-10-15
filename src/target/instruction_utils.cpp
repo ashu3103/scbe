@@ -40,7 +40,7 @@ uint32_t selectRegister(size_t size, const std::array<uint32_t, 4>& regs) {
     throw std::runtime_error("Not legal");
 }
 
-ISel::DAG::Node* extractOperand(ISel::DAG::Node* node) {
+ISel::DAG::Node* extractOperand(ISel::DAG::Node* node, bool extractCast) {
     switch (node->getKind()) {
         case ISel::DAG::Node::NodeKind::ConstantInt:
         case ISel::DAG::Node::NodeKind::MultiValue:
@@ -52,6 +52,11 @@ ISel::DAG::Node* extractOperand(ISel::DAG::Node* node) {
         case ISel::DAG::Node::NodeKind::Root:
         case ISel::DAG::Node::NodeKind::Count:
             break;
+        case ISel::DAG::Node::NodeKind::GenericCast: {
+            ISel::DAG::Instruction* i = (ISel::DAG::Instruction*)node;
+            if(!extractCast) return i->getResult();
+            return extractOperand(i->getOperands().at(0));
+        }
         default: {
             ISel::DAG::Instruction* i = (ISel::DAG::Instruction*)node;
             return i->getResult();

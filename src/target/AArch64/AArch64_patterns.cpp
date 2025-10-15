@@ -964,7 +964,7 @@ MIR::Operand* emitGEP(EMITTER_ARGS) {
     ISel::DAG::Instruction* i = cast<ISel::DAG::Instruction>(node);
     MIR::Register* ret = cast<MIR::Register>(isel->emitOrGet(i->getResult(), block));
     MIR::Operand* base = isel->emitOrGet(i->getOperands().at(0), block);
-    Type* curType = ((Value*)extractOperand(i->getResult()))->getType();
+    Type* curType = ((Value*)extractOperand(i->getOperands().at(0), false))->getType();
     int64_t curOff = 0;
 
     if(base->getKind() == MIR::Operand::Kind::FrameIndex) {
@@ -1087,13 +1087,27 @@ MIR::Operand* emitCallLowering(EMITTER_ARGS) {
 bool matchNativeCall(MATCHER_ARGS) {
     ISel::DAG::Instruction* i = cast<ISel::DAG::Instruction>(node);
     Call* call = cast<Call>(i);
-    return call->getOperands().at(0)->getKind() == Node::NodeKind::GlobalValue && cast<Function>(call->getOperands().at(0))->getFunction()->isNative();
+    if(call->getOperands().at(0)->getKind() == Node::NodeKind::GlobalValue) {
+        return cast<Function>(call->getOperands().at(0))->getFunction()->isNative();
+    }
+    else if(call->getOperands().at(0)->getKind() == Node::NodeKind::LoadGlobal) {
+        auto loadGlobal = cast<Instruction>(call->getOperands().at(0));
+        return cast<Function>(loadGlobal->getOperands().at(0))->getFunction()->isNative();
+    }
+    return false;
 }
 
 MIR::Operand* emitNativeCall(EMITTER_ARGS) {
     ISel::DAG::Instruction* i = cast<ISel::DAG::Instruction>(node);
     Call* call = cast<Call>(i);
-    IR::NativeFunction* native = cast<IR::NativeFunction>(cast<Function>(call->getOperands().at(0))->getFunction());
+    IR::NativeFunction* native = nullptr;
+    if(call->getOperands().at(0)->getKind() == Node::NodeKind::GlobalValue) {
+        native = cast<IR::NativeFunction>(cast<Function>(call->getOperands().at(0))->getFunction());
+    }
+    else if(call->getOperands().at(0)->getKind() == Node::NodeKind::LoadGlobal) {
+        auto loadGlobal = cast<Instruction>(call->getOperands().at(0));
+        native = cast<IR::NativeFunction>(cast<Function>(loadGlobal->getOperands().at(0))->getFunction());
+    }
     MIR::Operand* ret = i->getResult()->getType()->isVoidType() ? nullptr : isel->emitOrGet(i->getResult(), block);
 
     switch (native->getNativeName()) {
@@ -1803,6 +1817,14 @@ MIR::Operand* emitURem(EMITTER_ARGS) {
     block->addInstruction(instr(size == 8 ? OPCODE(Msub64) : OPCODE(Msub32), ret, ret, right, left));
     
     return ret;
+}
+
+bool matchGenericCast(MATCHER_ARGS) {
+    return true;
+}
+MIR::Operand* emitGenericCast(EMITTER_ARGS) {
+    ISel::DAG::Instruction* i = cast<ISel::DAG::Instruction>(node);
+    return isel->emitOrGet(i->getOperands().at(0), block);
 }
 
 }

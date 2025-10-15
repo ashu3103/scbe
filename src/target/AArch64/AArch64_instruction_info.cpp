@@ -370,6 +370,8 @@ AArch64InstructionInfo::AArch64InstructionInfo(RegisterInfo* registerInfo, Ref<C
             .match(matchFCmpRegisterRegister).emit(emitFCmpRegisterRegister).withName("CmpFRegisterRegister")
         .forOpcode(Node::NodeKind::Switch)
             .match(matchSwitch).emit(emitSwitchLowering).withName("Switch")
+        .forOpcode(Node::NodeKind::GenericCast)
+            .match(matchGenericCast).emit(emitGenericCast).withName("GenericCast")
         .build()
     );
 }

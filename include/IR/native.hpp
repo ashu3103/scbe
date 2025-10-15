@@ -14,7 +14,7 @@ public:
         Memcpy
     };
 
-    static Ref<NativeFunction> get(Name name, Ref<Context> ctx);
+    static std::unique_ptr<NativeFunction> get(Name name, Ref<Context> ctx);
 
     Name getNativeName() const { return m_nativeName; }
 

@@ -64,6 +64,7 @@ public:
     Node* createIMul(Node* lhs, Node* rhs, Register* reg);
     Node* createUMul(Node* lhs, Node* rhs, Register* reg);
     Node* createFMul(Node* lhs, Node* rhs, Register* reg);
+    Node* createGenericCast(Register* reg, Node* from, Type* toType);
 
 private:
     Root* m_root = nullptr;

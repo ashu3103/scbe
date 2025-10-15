@@ -213,4 +213,7 @@ MIR::Operand* emitUMul(EMITTER_ARGS);
 bool matchFMul(MATCHER_ARGS);
 MIR::Operand* emitFMul(EMITTER_ARGS);
 
+bool matchGenericCast(MATCHER_ARGS);
+MIR::Operand* emitGenericCast(EMITTER_ARGS);
+
 }

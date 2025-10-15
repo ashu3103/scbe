@@ -24,7 +24,7 @@ bool case8(Target::TargetSpecification& spec, int debug) {
         IR::ConstantInt::get(32, 0, ctx),
         IR::ConstantInt::get(32, 2, ctx)
     };
-    auto gep = builder.createGEP(arrayPtr->getType(), arrayPtr, indic);
+    auto gep = builder.createGEP(arrayPtr, indic);
     auto val = IR::ConstantInt::get(32, 123, ctx);
     builder.createStore(gep, val);
 

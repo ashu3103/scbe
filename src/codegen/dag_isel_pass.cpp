@@ -558,10 +558,7 @@ ISel::DAG::Node* DagISelPass::buildInstruction(IR::Instruction* value) {
         case IR::Instruction::Opcode::Ptrtoint:
         case IR::Instruction::Opcode::Inttoptr:
         case IR::Instruction::Opcode::Bitcast: {
-            IR::CastInstruction* irCast = cast<IR::CastInstruction>(value);
-            ISel::DAG::Node* operand = buildNonChain(irCast->getOperand(0));
-            m_valuesToNodes[value] = operand;
-            return operand;
+            GET_CAST(GenericCast);
         }
         case IR::Instruction::Opcode::Jump:
         case IR::Instruction::Opcode::Ret:

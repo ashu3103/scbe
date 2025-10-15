@@ -205,4 +205,7 @@ MIR::Operand* emitIRem(EMITTER_ARGS);
 bool matchURem(MATCHER_ARGS);
 MIR::Operand* emitURem(EMITTER_ARGS);
 
+bool matchGenericCast(MATCHER_ARGS);
+MIR::Operand* emitGenericCast(EMITTER_ARGS);
+
 }
